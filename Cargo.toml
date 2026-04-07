@@ -1,8 +1,14 @@
 [workspace]
 resolver = "2"
-members = ["crates/cli"]
+members = ["crates/cli", "crates/scanner"]
 
 [workspace.package]
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.91"
+
+[workspace.dependencies]
+anyhow = "1.0.102"
+clap = "4.6.0"
+scanner = { path = "crates/scanner" }
+thiserror = "2.0.18"

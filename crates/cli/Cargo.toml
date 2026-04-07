@@ -5,4 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-scanner = "0.1.0"
+anyhow = { workspace = true }
+clap = { workspace = true }
+scanner = { workspace = true }
+thiserror = { workspace = true }
