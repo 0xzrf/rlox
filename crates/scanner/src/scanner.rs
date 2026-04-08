@@ -86,6 +86,20 @@ impl Scanner {
                     (TokenType::BANG, "!", 1)
                 }
             }
+            '>' => {
+                if rest_peekable.peek() == Some(&'=') {
+                    (TokenType::GREATER_EQUAL, ">=", 2)
+                } else {
+                    (TokenType::GREATER, ">", 1)
+                }
+            }
+            '<' => {
+                if rest_peekable.peek() == Some(&'=') {
+                    (TokenType::LESS_EQUAL, "<=", 2)
+                } else {
+                    (TokenType::LESS, "<", 1)
+                }
+            }
             _ => return None,
         };
 
