@@ -25,6 +25,8 @@ impl Scanner {
     pub fn scan(&mut self) -> Result<(), String> {
         if self.source.is_empty() {
             self.add_token(Token::new(TokenType::EOF, 0, "".to_string()));
+            self.print_tokens();
+            return Ok(());
         }
 
         let source = self.source.clone();
@@ -35,9 +37,11 @@ impl Scanner {
             while let Some((ix, c)) = line_peekable.peek() {
                 let token = Self::get_token(c, ix);
                 self.add_token(token);
+                line_peekable.next();
             }
         }
 
+        self.add_token(Token::new(TokenType::EOF, 0, "".to_string()));
         self.print_tokens();
 
         Ok(())
@@ -47,6 +51,8 @@ impl Scanner {
         let token_ty = match c {
             '(' => TokenType::LEFT_PAREN,
             ')' => TokenType::RIGHT_PAREN,
+            '{' => TokenType::LEFT_BRACE,
+            '}' => TokenType::RIGHT_BRACE,
             _ => todo!(),
         };
 
