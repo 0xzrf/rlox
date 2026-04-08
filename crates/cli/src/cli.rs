@@ -12,18 +12,17 @@ pub struct Commands {
 }
 
 impl Commands {
-    pub fn handle_command(&self) -> InterpreterErrors<()> {
+    pub fn handle_command(&self) -> InterpreterErrors<i32> {
         match self.cmd.as_str() {
             "tokenize" => {
                 let mut scanner = Scanner::new(self.file_path.clone());
 
-                if let Err(e) = scanner.scan() {
-                    return Err(CliErrors::ScannerError { reason: e });
+                match scanner.scan() {
+                    Ok(error_code) => Ok(error_code),
+                    Err(e) => Err(CliErrors::ScannerError { reason: e }),
                 }
             }
             _ => return Err(CliErrors::InvalidCommand),
         }
-
-        Ok(())
     }
 }

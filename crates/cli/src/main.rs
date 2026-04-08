@@ -1,7 +1,11 @@
 use cli::run;
 
 fn main() {
-    if let Err(e) = run() {
-        println!("Error occured: {}", e);
+    match run() {
+        Ok(exit_code) => std::process::exit(exit_code),
+        Err(e) => {
+            eprint!("Error Occured: {}", e);
+            std::process::exit(65);
+        }
     }
 }

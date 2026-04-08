@@ -22,20 +22,26 @@ impl Scanner {
         }
     }
 
-    pub fn scan(&mut self) -> Result<(), String> {
+    pub fn scan(&mut self) -> Result<i32, String> {
         if self.source.is_empty() {
             self.add_token(Token::new(TokenType::EOF, 0, "".to_string()));
             self.print_tokens();
-            return Ok(());
+            return Ok(0);
         }
 
         let source = self.source.clone();
+        let mut exit_code = 0;
 
-        for lines in source.lines() {
+        for (line_ix, lines) in source.lines().enumerate() {
             let mut line_peekable = lines.char_indices().peekable();
 
             while let Some((ix, c)) = line_peekable.peek() {
-                let token = Self::get_token(c, ix);
+                let Some(token) = Self::get_token(c, ix) else {
+                    eprintln!("[line {}] Error: Unexpected character: {}", line_ix + 1, c);
+                    line_peekable.next();
+                    exit_code = 65;
+                    continue;
+                };
                 self.add_token(token);
                 line_peekable.next();
             }
@@ -44,19 +50,26 @@ impl Scanner {
         self.add_token(Token::new(TokenType::EOF, 0, "".to_string()));
         self.print_tokens();
 
-        Ok(())
+        Ok(exit_code)
     }
 
-    pub fn get_token(c: &char, ix: &usize) -> Token {
+    pub fn get_token(c: &char, ix: &usize) -> Option<Token> {
         let token_ty = match c {
             '(' => TokenType::LEFT_PAREN,
             ')' => TokenType::RIGHT_PAREN,
             '{' => TokenType::LEFT_BRACE,
             '}' => TokenType::RIGHT_BRACE,
-            _ => todo!(),
+            ',' => TokenType::COMMA,
+            '.' => TokenType::DOT,
+            '-' => TokenType::MINUS,
+            '+' => TokenType::PLUS,
+            ';' => TokenType::SEMICOLON,
+            '*' => TokenType::STAR,
+            _ => return None,
         };
 
-        Token::new(token_ty, *ix, c.to_string())
+
+        Some(Token::new(token_ty, *ix, c.to_string()))
     }
 
     pub fn print_tokens(&self) {
