@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 
-use interpreter_types::Token;
+use interpreter_types::{Token, TokenType};
 
 pub struct Scanner {
     source: String,
@@ -23,7 +23,28 @@ impl Scanner {
     }
 
     pub fn scan(&mut self) -> Result<(), String> {
-        println!("{}", self.source);
+        if self.source.is_empty() {
+            self.add_token(TokenType::EOF, 0, "".to_string());
+        } else {
+            panic!("Scanner not implemented")
+        }
+
+        for _lines in self.source.lines() {
+            println!("ran a line");
+        }
+
+        self.print_tokens();
+
         Ok(())
+    }
+
+    pub fn print_tokens(&self) {
+        for token in &self.tokens {
+            println!("{}", token.to_string());
+        }
+    }
+
+    pub fn add_token(&mut self, token_ty: TokenType, line: usize, lexeme: String) {
+        self.tokens.push(Token::new(token_ty, line, lexeme));
     }
 }
