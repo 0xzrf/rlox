@@ -6,4 +6,10 @@ pub type InterpreterErrors<T> = Result<T, CliErrors>;
 pub enum CliErrors {
     #[error("Invalid file type")]
     InvalidFileType,
+
+    #[error("Invalid command")]
+    InvalidCommand,
+
+    #[error("Scanner Error: {}", reason)]
+    ScannerError { reason: String },
 }

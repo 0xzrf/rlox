@@ -1,3 +1,7 @@
+use cli::run;
+
 fn main() {
-    println!("Hello, world!");
+    if let Err(e) = run() {
+        println!("Error occured: {}", e);
+    }
 }

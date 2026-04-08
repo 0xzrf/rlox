@@ -11,6 +11,5 @@ rust-version = "1.91"
 anyhow = "1.0.102"
 clap = { version = "4.6.0", features = ["derive"] }
 interpreter-types = { path = "crates/types" }
-regex = "1.12.3"
 scanner = { path = "crates/scanner" }
 thiserror = "2.0.18"

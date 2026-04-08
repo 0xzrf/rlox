@@ -1,4 +1,5 @@
-pub enum TokenTypes {
+#[derive(Debug)]
+pub enum TokenType {
     // Single-character tokens
     LEFT_PAREN,
     RIGHT_PAREN,
