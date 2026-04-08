@@ -79,7 +79,13 @@ impl Scanner {
                     (TokenType::EQUAL, "=", 1)
                 }
             }
-
+            '!' => {
+                if rest_peekable.peek() == Some(&'=') {
+                    (TokenType::BANG_EQUAL, "!=", 2)
+                } else {
+                    (TokenType::BANG, "!", 1)
+                }
+            }
             _ => return None,
         };
 
