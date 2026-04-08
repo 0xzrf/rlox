@@ -24,18 +24,33 @@ impl Scanner {
 
     pub fn scan(&mut self) -> Result<(), String> {
         if self.source.is_empty() {
-            self.add_token(TokenType::EOF, 0, "".to_string());
-        } else {
-            panic!("Scanner not implemented")
+            self.add_token(Token::new(TokenType::EOF, 0, "".to_string()));
         }
 
-        for _lines in self.source.lines() {
-            println!("ran a line");
+        let source = self.source.clone();
+
+        for lines in source.lines() {
+            let mut line_peekable = lines.char_indices().peekable();
+
+            while let Some((ix, c)) = line_peekable.peek() {
+                let token = Self::get_token(c, ix);
+                self.add_token(token);
+            }
         }
 
         self.print_tokens();
 
         Ok(())
+    }
+
+    pub fn get_token(c: &char, ix: &usize) -> Token {
+        let token_ty = match c {
+            '(' => TokenType::LEFT_PAREN,
+            ')' => TokenType::RIGHT_PAREN,
+            _ => todo!(),
+        };
+
+        Token::new(token_ty, *ix, c.to_string())
     }
 
     pub fn print_tokens(&self) {
@@ -44,7 +59,7 @@ impl Scanner {
         }
     }
 
-    pub fn add_token(&mut self, token_ty: TokenType, line: usize, lexeme: String) {
-        self.tokens.push(Token::new(token_ty, line, lexeme));
+    pub fn add_token(&mut self, token: Token) {
+        self.tokens.push(token);
     }
 }

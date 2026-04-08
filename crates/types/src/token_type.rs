@@ -46,6 +46,5 @@ pub enum TokenType {
     VAR,
     WHILE,
 
-    // Extran
     EOF,
 }
