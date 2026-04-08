@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/cli", "crates/scanner"]
+members = ["crates/cli", "crates/scanner", "crates/types"]
 
 [workspace.package]
 version = "0.1.0"
@@ -10,5 +10,7 @@ rust-version = "1.91"
 [workspace.dependencies]
 anyhow = "1.0.102"
 clap = { version = "4.6.0", features = ["derive"] }
+interpreter-types = { path = "crates/types" }
+regex = "1.12.3"
 scanner = { path = "crates/scanner" }
 thiserror = "2.0.18"
