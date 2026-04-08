@@ -38,11 +38,20 @@ impl Scanner {
             while let Some((ix, c)) = line_peekable.peek() {
                 let rest_of_line = lines.chars().skip(*ix + 1).collect::<String>(); // skip to ix + 1 so that rest_of_line.peak() gives the element after the current value
 
-                let Some((token, to_skip)) = Self::get_token(c, ix, rest_of_line) else {
-                    eprintln!("[line {}] Error: Unexpected character: {}", line_ix + 1, c);
-                    line_peekable.next();
-                    exit_code = 65;
-                    continue;
+                let (token, to_skip) = match Self::get_token(c, ix, rest_of_line) {
+                    Ok((token, to_skip)) => (token, to_skip),
+                    // handle the case when the line is either an error
+                    Err(is_comment) => {
+                        if is_comment {
+                            for _ in line_peekable.by_ref() {}
+                            break;
+                        } else {
+                            eprintln!("[line {}] Error: Unexpected character: {}", line_ix + 1, c);
+                            line_peekable.next();
+                            exit_code = 65;
+                        }
+                        continue;
+                    }
                 };
                 self.add_token(token);
 
@@ -58,7 +67,11 @@ impl Scanner {
         Ok(exit_code)
     }
 
-    pub fn get_token(c: &char, start: &usize, rest_of_line: String) -> Option<(Token, usize)> {
+    pub fn get_token(
+        c: &char,
+        start: &usize,
+        rest_of_line: String,
+    ) -> Result<(Token, usize), bool> {
         let mut rest_peekable = rest_of_line.chars().peekable();
 
         let (token_ty, lexeam, to_skip) = match c {
@@ -100,11 +113,18 @@ impl Scanner {
                     (TokenType::LESS, "<", 1)
                 }
             }
-            _ => return None,
+            '/' => {
+                if rest_peekable.peek() == Some(&'/') {
+                    return Err(true);
+                } else {
+                    (TokenType::SLASH, "/", 1)
+                }
+            }
+            _ => return Err(false),
         };
 
 
-        Some((Token::new(token_ty, *start, lexeam.to_string()), to_skip))
+        Ok((Token::new(token_ty, *start, lexeam.to_string()), to_skip))
     }
 
     pub fn print_tokens(&self) {
