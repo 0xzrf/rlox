@@ -438,10 +438,74 @@ mod tests {
         assert_eq!(
             s.token_lines(),
             vec![
-                token_repr(TokenType::IDENTIFIER, "print"),
+                token_repr(TokenType::PRINT, "print"),
                 token_repr(TokenType::LEFT_PAREN, "("),
                 token_repr(TokenType::RIGHT_PAREN, ")"),
                 token_repr(TokenType::SEMICOLON, ";"),
+                token_repr(TokenType::EOF, ""),
+            ]
+        );
+    }
+
+    /// Every Lox reserved word must lex as its keyword token (lexeme unchanged).
+    #[test]
+    fn get_token_reserved_words_map_to_keywords() {
+        let cases = [
+            ("and", TokenType::AND),
+            ("class", TokenType::CLASS),
+            ("else", TokenType::ELSE),
+            ("false", TokenType::FALSE),
+            ("for", TokenType::FOR),
+            ("fun", TokenType::FUN),
+            ("if", TokenType::IF),
+            ("nil", TokenType::NIL),
+            ("or", TokenType::OR),
+            ("print", TokenType::PRINT),
+            ("return", TokenType::RETURN),
+            ("super", TokenType::SUPER),
+            ("this", TokenType::THIS),
+            ("true", TokenType::TRUE),
+            ("var", TokenType::VAR),
+            ("while", TokenType::WHILE),
+        ];
+        for (word, expected_ty) in cases {
+            let (first, rest) = word.split_at(1);
+            let c0 = first.chars().next().unwrap();
+            let (tok, n) = Scanner::get_token(&c0, &0, &0, rest.to_string()).unwrap().unwrap();
+            assert_eq!(n, word.len(), "word {word:?}");
+            assert_eq!(tok.to_string(), token_repr(expected_ty, word), "word {word:?}");
+        }
+    }
+
+    #[test]
+    fn scan_line_of_keywords() {
+        let mut s = Scanner::from_source("if else while true false nil var");
+        assert_eq!(s.scan().unwrap(), 0);
+        assert_eq!(
+            s.token_lines(),
+            vec![
+                token_repr(TokenType::IF, "if"),
+                token_repr(TokenType::ELSE, "else"),
+                token_repr(TokenType::WHILE, "while"),
+                token_repr(TokenType::TRUE, "true"),
+                token_repr(TokenType::FALSE, "false"),
+                token_repr(TokenType::NIL, "nil"),
+                token_repr(TokenType::VAR, "var"),
+                token_repr(TokenType::EOF, ""),
+            ]
+        );
+    }
+
+    #[test]
+    fn scan_keyword_prefix_stays_identifier() {
+        // "orchid" is not `or`; "whiley" is not `while`.
+        let mut s = Scanner::from_source("orchid whiley");
+        assert_eq!(s.scan().unwrap(), 0);
+        assert_eq!(
+            s.token_lines(),
+            vec![
+                token_repr(TokenType::IDENTIFIER, "orchid"),
+                token_repr(TokenType::IDENTIFIER, "whiley"),
                 token_repr(TokenType::EOF, ""),
             ]
         );
