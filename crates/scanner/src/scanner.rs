@@ -168,15 +168,8 @@ impl Scanner {
             digit if digit.is_numeric() => {
                 let mut lit = String::new();
                 lit.push(*digit);
-                let Some(rest_integer) = Self::get_numeric_string(&mut rest_peekable) else {
-                    return Err((
-                        false,
-                        Some(rest_of_line.len() + 1),
-                        ScannerError::UnterminatedString,
-                    ));
-                };
 
-                lit.push_str(&rest_integer);
+                lit.push_str(&Self::get_numeric_string(&mut rest_peekable));
 
                 let lit_lexeme = lit.clone();
 
@@ -205,7 +198,14 @@ impl Scanner {
 
                 (TokenType::NUMBER, lit_lexeme, len, lit)
             }
+            alpha_num if alpha_num.is_alphanumeric() | alpha_num.eq(&'_') => {
+                let mut lexeme = String::new();
+                lexeme.push(*c);
 
+                lexeme.push_str(&Self::get_identifier_string(&mut rest_peekable));
+                let lexeme_len = lexeme.len();
+                (TokenType::IDENTIFIER, lexeme, lexeme_len, "null".to_string())
+            }
             _ => return Err((false, None, ScannerError::UnexpectedCharacter { c: *c })),
         };
 
@@ -217,6 +217,7 @@ impl Scanner {
         Some(c) == input_peekable.peek().copied()
     }
 
+    #[inline(always)]
     fn get_string_till(input_peekable: &mut Peekable<Chars>, till: char) -> String {
         let mut string_lit_buf = String::new();
         while let Some(c) = input_peekable.next_if(|c| c.ne(&till)) {
@@ -226,10 +227,25 @@ impl Scanner {
         string_lit_buf
     }
 
+    #[inline(always)]
+    fn get_identifier_string(input_peekable: &mut Peekable<Chars>) -> String {
+        let mut string_lit_buf = String::new();
+        while let Some(c) = input_peekable.peek().copied() {
+            if !c.is_alphanumeric() && c.ne(&'_') {
+                break;
+            }
+
+            string_lit_buf.push(c);
+            input_peekable.next();
+        }
+
+        string_lit_buf
+    }
+
     /// Continues a numeric lexeme from `input_peekable` (does not include the already-consumed
     /// leading digit). Uses `peek().copied()` so we never store `&char` from `peek()` across
     /// `next()` calls, which would trigger borrow-checker errors.
-    fn get_numeric_string(input_peekable: &mut Peekable<Chars>) -> Option<String> {
+    fn get_numeric_string(input_peekable: &mut Peekable<Chars>) -> String {
         let mut suffix = String::new();
         while let Some(c) = input_peekable.peek().copied() {
             if !c.is_numeric() && c.ne(&'.') {
@@ -239,7 +255,7 @@ impl Scanner {
             suffix.push(c);
             input_peekable.next();
         }
-        Some(suffix)
+        suffix
     }
 
     fn print_tokens(&self) {
