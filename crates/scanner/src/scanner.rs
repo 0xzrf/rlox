@@ -157,19 +157,55 @@ impl Scanner {
                         ScannerError::UnterminatedString,
                     ));
                 }
-                let mut string_lit_buf = Vec::new();
-                while let Some(c) = rest_peekable.next_if(|c| c.ne(&'"'))
-                    && rest_peekable.peek().is_some()
-                {
-                    string_lit_buf.push(c);
-                }
 
-                let lit = string_lit_buf.iter().collect::<String>();
+                let lit = Self::get_string_till(&mut rest_peekable, '"');
                 let lit_lexeme = format!("\"{}\"", lit);
-
 
                 (TokenType::STRING, lit_lexeme, lit.len() + 2, lit)
             }
+
+            // Handle literal Integers (leading digit is `c`; further digits live in `rest_peekable`)
+            digit if digit.is_numeric() => {
+                let mut lit = String::new();
+                lit.push(*digit);
+                let Some(rest_integer) = Self::get_numeric_string(&mut rest_peekable) else {
+                    return Err((
+                        false,
+                        Some(rest_of_line.len() + 1),
+                        ScannerError::UnterminatedString,
+                    ));
+                };
+
+                lit.push_str(&rest_integer);
+
+                let lit_lexeme = lit.clone();
+
+                let len = lit.len();
+
+                if !lit.contains(".") {
+                    lit.push_str(".0");
+                } else {
+                    // Remove all the trailing '0' in lit (after the decimal point),
+                    // unless it's just a single '0' after the '.', i.e., leave "123.0" as is,
+                    // but for cases like "123.1000" make it "123.1"; for "123.0000", "123.0".
+                    if let Some(dot_pos) = lit.find('.') {
+                        // Split into integer and fraction part
+                        let (left, right) = lit.split_at(dot_pos + 1); // right starts with fraction
+                        // remove trailing zeros from fraction
+                        let right_trimmed = right.trim_end_matches('0');
+                        // if nothing left after the dot, keep one '0'
+                        let final_lit = if right_trimmed.is_empty() {
+                            format!("{}0", left)
+                        } else {
+                            format!("{}{}", left, right_trimmed)
+                        };
+                        lit = final_lit;
+                    }
+                }
+
+                (TokenType::NUMBER, lit_lexeme, len, lit)
+            }
+
             _ => return Err((false, None, ScannerError::UnexpectedCharacter { c: *c })),
         };
 
@@ -179,6 +215,31 @@ impl Scanner {
     #[inline(always)]
     fn match_next(input_peekable: &mut Peekable<Chars>, c: char) -> bool {
         Some(c) == input_peekable.peek().copied()
+    }
+
+    fn get_string_till(input_peekable: &mut Peekable<Chars>, till: char) -> String {
+        let mut string_lit_buf = String::new();
+        while let Some(c) = input_peekable.next_if(|c| c.ne(&till)) {
+            string_lit_buf.push(c);
+        }
+
+        string_lit_buf
+    }
+
+    /// Continues a numeric lexeme from `input_peekable` (does not include the already-consumed
+    /// leading digit). Uses `peek().copied()` so we never store `&char` from `peek()` across
+    /// `next()` calls, which would trigger borrow-checker errors.
+    fn get_numeric_string(input_peekable: &mut Peekable<Chars>) -> Option<String> {
+        let mut suffix = String::new();
+        while let Some(c) = input_peekable.peek().copied() {
+            if !c.is_numeric() && c.ne(&'.') {
+                break;
+            }
+
+            suffix.push(c);
+            input_peekable.next();
+        }
+        Some(suffix)
     }
 
     fn print_tokens(&self) {
@@ -438,10 +499,16 @@ mod tests {
     #[test]
     fn scan_slash_not_comment_when_single() {
         let mut s = Scanner::from_source("1/2");
-        assert_eq!(s.scan().unwrap(), 65);
-        let lines = s.token_lines();
-        assert!(lines.iter().any(|l| l.contains("SLASH")));
-        assert_eq!(lines.last().unwrap(), &token_repr(TokenType::EOF, ""));
+        assert_eq!(s.scan().unwrap(), 0);
+        assert_eq!(
+            s.token_lines(),
+            vec![
+                token_repr_lit(TokenType::NUMBER, "1", "1"),
+                token_repr(TokenType::SLASH, "/"),
+                token_repr_lit(TokenType::NUMBER, "2", "2"),
+                token_repr(TokenType::EOF, ""),
+            ]
+        );
     }
 
     #[test]
