@@ -5,7 +5,7 @@ use std::str::Chars;
 
 use interpreter_types::{Token, TokenType};
 
-use crate::NULL;
+use crate::{NULL, ScannerError};
 
 pub struct Scanner {
     source: String,
@@ -13,7 +13,7 @@ pub struct Scanner {
 }
 
 type MaybeToken = Option<(Token, usize)>;
-type GetTokenErr = (bool, Option<usize>);
+type GetTokenErr = (bool, Option<usize>, ScannerError);
 
 impl Scanner {
     pub fn new(source_file: String) -> Self {
@@ -53,17 +53,15 @@ impl Scanner {
                         continue;
                     }
                     // handle the case when the line is either an error
-                    Err((is_comment, to_skip)) => {
+                    Err((is_comment, to_skip, err_msg)) => {
                         if is_comment {
                             for _ in line_peekable.by_ref() {}
                             break;
                         } else {
-                            eprintln!("[line {}] Error: Unexpected character: {}", line_ix + 1, c);
-                            if let Some(to_skip) = to_skip {
-                                for _ in 0..to_skip {
-                                    line_peekable.peek();
-                                }
-                            } else {
+                            eprintln!("[line {}] Error: {}", line_ix + 1, err_msg);
+                            let to_skip = to_skip.unwrap_or(1);
+
+                            for _ in 0..to_skip {
                                 line_peekable.next();
                             }
 
@@ -138,7 +136,7 @@ impl Scanner {
             }
             '/' => {
                 if Self::match_next(&mut rest_peekable, '/') {
-                    return Err((true, None));
+                    return Err((true, None, ScannerError::UnexpectedCharacter { c: '/' }));
                 } else {
                     (TokenType::SLASH, "/".to_string(), 1, "null".to_string())
                 }
@@ -153,7 +151,11 @@ impl Scanner {
             // Handle literal string
             '"' => {
                 if !rest_of_line.contains("\"") {
-                    return Err((false, Some(rest_of_line.len())));
+                    return Err((
+                        false,
+                        Some(rest_of_line.len() + 1),
+                        ScannerError::UnterminatedString,
+                    ));
                 }
                 let mut string_lit_buf = Vec::new();
                 while let Some(c) = rest_peekable.next_if(|c| c.ne(&'"'))
@@ -168,7 +170,7 @@ impl Scanner {
 
                 (TokenType::STRING, lit_lexeme, lit.len() + 2, lit)
             }
-            _ => return Err((false, None)),
+            _ => return Err((false, None, ScannerError::UnexpectedCharacter { c: *c })),
         };
 
         Ok(Some((Token::new(token_ty, *line_ix, lexeam, *line_offset, literal), to_skip)))
@@ -288,8 +290,14 @@ mod tests {
 
     #[test]
     fn get_token_rejects_unknown() {
-        assert!(matches!(Scanner::get_token(&'a', &0, &0, String::new()), Err((false, None))));
-        assert!(matches!(Scanner::get_token(&'@', &0, &0, String::new()), Err((false, None))));
+        assert!(matches!(
+            Scanner::get_token(&'a', &0, &0, String::new()),
+            Err((false, None, ScannerError::UnexpectedCharacter { c: 'a' }))
+        ));
+        assert!(matches!(
+            Scanner::get_token(&'@', &0, &0, String::new()),
+            Err((false, None, ScannerError::UnexpectedCharacter { c: '@' }))
+        ));
     }
 
     #[test]
