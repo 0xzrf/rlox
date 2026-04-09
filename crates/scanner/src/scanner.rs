@@ -498,4 +498,60 @@ mod tests {
             ]
         );
     }
+
+    #[test]
+    fn scan_unterminated_string_line_no_closing_quote() {
+        let mut s = Scanner::from_source("\"hello");
+        assert_eq!(s.scan().unwrap(), 65);
+        assert_eq!(s.token_lines(), vec![token_repr(TokenType::EOF, "")]);
+    }
+
+    #[test]
+    fn scan_unterminated_string_only_opening_quote() {
+        let mut s = Scanner::from_source("\"");
+        assert_eq!(s.scan().unwrap(), 65);
+        assert_eq!(s.token_lines(), vec![token_repr(TokenType::EOF, "")]);
+    }
+
+    #[test]
+    fn scan_unterminated_string_after_valid_literal_and_semicolon() {
+        let mut s = Scanner::from_source("\"baz\" ; \"unterminated");
+        assert_eq!(s.scan().unwrap(), 65);
+        assert_eq!(
+            s.token_lines(),
+            vec![
+                token_repr_lit(TokenType::STRING, "\"baz\"", "baz"),
+                token_repr(TokenType::SEMICOLON, ";"),
+                token_repr(TokenType::EOF, ""),
+            ]
+        );
+    }
+
+    #[test]
+    fn scan_unterminated_string_after_another_string() {
+        let mut s = Scanner::from_source("\"a\" \"b");
+        assert_eq!(s.scan().unwrap(), 65);
+        assert_eq!(
+            s.token_lines(),
+            vec![token_repr_lit(TokenType::STRING, "\"a\"", "a"), token_repr(TokenType::EOF, ""),]
+        );
+    }
+
+    #[test]
+    fn get_token_unterminated_string_reports_error() {
+        let rest = "no-closing-quote".to_string();
+        let expected_skip = Some(rest.len() + 1);
+        assert!(matches!(
+            Scanner::get_token(&'"', &0, &0, rest),
+            Err((false, skip, ScannerError::UnterminatedString)) if skip == expected_skip
+        ));
+    }
+
+    #[test]
+    fn get_token_unterminated_only_quote_after_is_empty() {
+        assert!(matches!(
+            Scanner::get_token(&'"', &0, &0, String::new()),
+            Err((false, Some(1), ScannerError::UnterminatedString))
+        ));
+    }
 }
