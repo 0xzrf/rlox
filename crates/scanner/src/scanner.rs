@@ -203,8 +203,10 @@ impl Scanner {
                 lexeme.push(*c);
 
                 lexeme.push_str(&Self::get_identifier_string(&mut rest_peekable));
+
                 let lexeme_len = lexeme.len();
-                (TokenType::IDENTIFIER, lexeme, lexeme_len, "null".to_string())
+
+                (TokenType::from_identifier(&lexeme), lexeme, lexeme_len, "null".to_string())
             }
             _ => return Err((false, None, ScannerError::UnexpectedCharacter { c: *c })),
         };
@@ -368,13 +370,81 @@ mod tests {
     #[test]
     fn get_token_rejects_unknown() {
         assert!(matches!(
-            Scanner::get_token(&'a', &0, &0, String::new()),
-            Err((false, None, ScannerError::UnexpectedCharacter { c: 'a' }))
+            Scanner::get_token(&'#', &0, &0, String::new()),
+            Err((false, None, ScannerError::UnexpectedCharacter { c: '#' }))
         ));
         assert!(matches!(
             Scanner::get_token(&'@', &0, &0, String::new()),
             Err((false, None, ScannerError::UnexpectedCharacter { c: '@' }))
         ));
+    }
+
+    #[test]
+    fn get_token_identifier_single_letter() {
+        let (tok, n) = Scanner::get_token(&'x', &0, &0, String::new()).unwrap().unwrap();
+        assert_eq!(n, 1);
+        assert_eq!(tok.to_string(), token_repr(TokenType::IDENTIFIER, "x"));
+    }
+
+    #[test]
+    fn get_token_identifier_word_and_skip_count() {
+        let (tok, n) = Scanner::get_token(&'f', &0, &0, "oo+".to_string()).unwrap().unwrap();
+        assert_eq!(n, 3);
+        assert_eq!(tok.to_string(), token_repr(TokenType::IDENTIFIER, "foo"));
+    }
+
+    #[test]
+    fn get_token_identifier_with_digits() {
+        let (tok, n) = Scanner::get_token(&'a', &0, &0, "bc123)".to_string()).unwrap().unwrap();
+        assert_eq!(n, 6);
+        assert_eq!(tok.to_string(), token_repr(TokenType::IDENTIFIER, "abc123"));
+    }
+
+    #[test]
+    fn get_token_identifier_leading_underscore() {
+        let (tok, n) = Scanner::get_token(&'_', &0, &0, "priv9 ".to_string()).unwrap().unwrap();
+        assert_eq!(n, 6);
+        assert_eq!(tok.to_string(), token_repr(TokenType::IDENTIFIER, "_priv9"));
+    }
+
+    #[test]
+    fn scan_identifier_foo_then_eof() {
+        let mut s = Scanner::from_source("foo");
+        assert_eq!(s.scan().unwrap(), 0);
+        assert_eq!(
+            s.token_lines(),
+            vec![token_repr(TokenType::IDENTIFIER, "foo"), token_repr(TokenType::EOF, ""),]
+        );
+    }
+
+    #[test]
+    fn scan_identifiers_separated_by_whitespace() {
+        let mut s = Scanner::from_source("foo  bar_baz");
+        assert_eq!(s.scan().unwrap(), 0);
+        assert_eq!(
+            s.token_lines(),
+            vec![
+                token_repr(TokenType::IDENTIFIER, "foo"),
+                token_repr(TokenType::IDENTIFIER, "bar_baz"),
+                token_repr(TokenType::EOF, ""),
+            ]
+        );
+    }
+
+    #[test]
+    fn scan_identifier_before_punctuation() {
+        let mut s = Scanner::from_source("print();");
+        assert_eq!(s.scan().unwrap(), 0);
+        assert_eq!(
+            s.token_lines(),
+            vec![
+                token_repr(TokenType::IDENTIFIER, "print"),
+                token_repr(TokenType::LEFT_PAREN, "("),
+                token_repr(TokenType::RIGHT_PAREN, ")"),
+                token_repr(TokenType::SEMICOLON, ";"),
+                token_repr(TokenType::EOF, ""),
+            ]
+        );
     }
 
     #[test]
