@@ -4,3 +4,5 @@
 
 pub mod scanner;
 pub use scanner::Scanner;
+mod constants;
+use constants::*;

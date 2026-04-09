@@ -1,18 +1,24 @@
 use std::fs::File;
 use std::io::Read;
+use std::iter::Peekable;
+use std::str::Chars;
 
 use interpreter_types::{Token, TokenType};
+
+use crate::NULL;
 
 pub struct Scanner {
     source: String,
     tokens: Vec<Token>,
 }
 
+type MaybeToken = Option<(Token, usize)>;
+type GetTokenErr = (bool, Option<usize>);
+
 impl Scanner {
     pub fn new(source_file: String) -> Self {
         let mut source_buffer = String::new();
 
-        // Open the file and read its contents into the source_buffer
         let mut file = File::open(&source_file).expect("Failed to open source file");
         file.read_to_string(&mut source_buffer).expect("Failed to read source file");
 
@@ -24,12 +30,13 @@ impl Scanner {
 
     pub fn scan(&mut self) -> Result<i32, String> {
         if self.source.is_empty() {
-            self.add_token(Token::new(TokenType::EOF, 0, "".to_string()));
+            self.add_token(Token::new(TokenType::EOF, 0, "".to_string(), 0, NULL.to_string()));
             self.print_tokens();
             return Ok(0);
         }
 
         let source = self.source.clone();
+        // println!("source: {source}");
         let mut exit_code = 0;
 
         for (line_ix, lines) in source.lines().enumerate() {
@@ -38,16 +45,28 @@ impl Scanner {
             while let Some((ix, c)) = line_peekable.peek() {
                 let rest_of_line = lines.chars().skip(*ix + 1).collect::<String>(); // skip to ix + 1 so that rest_of_line.peak() gives the element after the current value
 
-                let (token, to_skip) = match Self::get_token(c, ix, rest_of_line) {
-                    Ok((token, to_skip)) => (token, to_skip),
+                let (token, to_skip) = match Self::get_token(c, ix, &line_ix, rest_of_line) {
+                    Ok(Some((token, to_skip))) => (token, to_skip),
+                    Ok(None) => {
+                        // this is the case when the character token needs to be skipped
+                        line_peekable.next();
+                        continue;
+                    }
                     // handle the case when the line is either an error
-                    Err(is_comment) => {
+                    Err((is_comment, to_skip)) => {
                         if is_comment {
                             for _ in line_peekable.by_ref() {}
                             break;
                         } else {
                             eprintln!("[line {}] Error: Unexpected character: {}", line_ix + 1, c);
-                            line_peekable.next();
+                            if let Some(to_skip) = to_skip {
+                                for _ in 0..to_skip {
+                                    line_peekable.peek();
+                                }
+                            } else {
+                                line_peekable.next();
+                            }
+
                             exit_code = 65;
                         }
                         continue;
@@ -61,79 +80,112 @@ impl Scanner {
             }
         }
 
-        self.add_token(Token::new(TokenType::EOF, 0, "".to_string()));
+        self.add_token(Token::new(TokenType::EOF, 0, "".to_string(), 0, NULL.to_string()));
         self.print_tokens();
 
         Ok(exit_code)
     }
 
-    pub fn get_token(
+    fn get_token(
         c: &char,
-        start: &usize,
+        line_offset: &usize,
+        line_ix: &usize,
         rest_of_line: String,
-    ) -> Result<(Token, usize), bool> {
+    ) -> Result<MaybeToken, GetTokenErr> {
         let mut rest_peekable = rest_of_line.chars().peekable();
 
-        let (token_ty, lexeam, to_skip) = match c {
-            '(' => (TokenType::LEFT_PAREN, "(", 1),
-            ')' => (TokenType::RIGHT_PAREN, ")", 1),
-            '{' => (TokenType::LEFT_BRACE, "{", 1),
-            '}' => (TokenType::RIGHT_BRACE, "}", 1),
-            ',' => (TokenType::COMMA, ",", 1),
-            '.' => (TokenType::DOT, ".", 1),
-            '-' => (TokenType::MINUS, "-", 1),
-            '+' => (TokenType::PLUS, "+", 1),
-            ';' => (TokenType::SEMICOLON, ";", 1),
-            '*' => (TokenType::STAR, "*", 1),
+        let (token_ty, lexeam, to_skip, literal) = match c {
+            // Single tokens
+            '(' => (TokenType::LEFT_PAREN, "(".to_string(), 1, "null".to_string()),
+            ')' => (TokenType::RIGHT_PAREN, ")".to_string(), 1, "null".to_string()),
+            '{' => (TokenType::LEFT_BRACE, "{".to_string(), 1, "null".to_string()),
+            '}' => (TokenType::RIGHT_BRACE, "}".to_string(), 1, "null".to_string()),
+            ',' => (TokenType::COMMA, ",".to_string(), 1, "null".to_string()),
+            '.' => (TokenType::DOT, ".".to_string(), 1, "null".to_string()),
+            '-' => (TokenType::MINUS, "-".to_string(), 1, "null".to_string()),
+            '+' => (TokenType::PLUS, "+".to_string(), 1, "null".to_string()),
+            ';' => (TokenType::SEMICOLON, ";".to_string(), 1, "null".to_string()),
+            '*' => (TokenType::STAR, "*".to_string(), 1, "null".to_string()),
+
+            // Single-double tokens
             '=' => {
-                if rest_peekable.peek() == Some(&'=') {
-                    (TokenType::EQUAL_EQUAL, "==", 2)
+                if Self::match_next(&mut rest_peekable, '=') {
+                    (TokenType::EQUAL_EQUAL, "==".to_string(), 2, "null".to_string())
                 } else {
-                    (TokenType::EQUAL, "=", 1)
+                    (TokenType::EQUAL, "=".to_string(), 1, "null".to_string())
                 }
             }
             '!' => {
-                if rest_peekable.peek() == Some(&'=') {
-                    (TokenType::BANG_EQUAL, "!=", 2)
+                if Self::match_next(&mut rest_peekable, '=') {
+                    (TokenType::BANG_EQUAL, "!=".to_string(), 2, "null".to_string())
                 } else {
-                    (TokenType::BANG, "!", 1)
+                    (TokenType::BANG, "!".to_string(), 1, "null".to_string())
                 }
             }
             '>' => {
-                if rest_peekable.peek() == Some(&'=') {
-                    (TokenType::GREATER_EQUAL, ">=", 2)
+                if Self::match_next(&mut rest_peekable, '=') {
+                    (TokenType::GREATER_EQUAL, ">=".to_string(), 2, "null".to_string())
                 } else {
-                    (TokenType::GREATER, ">", 1)
+                    (TokenType::GREATER, ">".to_string(), 1, "null".to_string())
                 }
             }
             '<' => {
-                if rest_peekable.peek() == Some(&'=') {
-                    (TokenType::LESS_EQUAL, "<=", 2)
+                if Self::match_next(&mut rest_peekable, '=') {
+                    (TokenType::LESS_EQUAL, "<=".to_string(), 2, "null".to_string())
                 } else {
-                    (TokenType::LESS, "<", 1)
+                    (TokenType::LESS, "<".to_string(), 1, "null".to_string())
                 }
             }
             '/' => {
-                if rest_peekable.peek() == Some(&'/') {
-                    return Err(true);
+                if Self::match_next(&mut rest_peekable, '/') {
+                    return Err((true, None));
                 } else {
-                    (TokenType::SLASH, "/", 1)
+                    (TokenType::SLASH, "/".to_string(), 1, "null".to_string())
                 }
             }
-            _ => return Err(false),
+
+            // Handle whitespace, nl and tab
+            ' ' | '\t' | '\r' => {
+                // println!("got a space character");
+                return Ok(None);
+            }
+
+            // Handle literal string
+            '"' => {
+                if !rest_of_line.contains("\"") {
+                    return Err((false, Some(rest_of_line.len())));
+                }
+                let mut string_lit_buf = Vec::new();
+                while let Some(c) = rest_peekable.next_if(|c| c.ne(&'"'))
+                    && rest_peekable.peek().is_some()
+                {
+                    string_lit_buf.push(c);
+                }
+
+                let lit = string_lit_buf.iter().collect::<String>();
+                let lit_lexeme = format!("\"{}\"", lit);
+
+
+                (TokenType::STRING, lit_lexeme, lit.len() + 2, lit)
+            }
+            _ => return Err((false, None)),
         };
 
-
-        Ok((Token::new(token_ty, *start, lexeam.to_string()), to_skip))
+        Ok(Some((Token::new(token_ty, *line_ix, lexeam, *line_offset, literal), to_skip)))
     }
 
-    pub fn print_tokens(&self) {
+    #[inline(always)]
+    fn match_next(input_peekable: &mut Peekable<Chars>, c: char) -> bool {
+        Some(c) == input_peekable.peek().copied()
+    }
+
+    fn print_tokens(&self) {
         for token in &self.tokens {
             println!("{}", token.to_string());
         }
     }
 
-    pub fn add_token(&mut self, token: Token) {
+    fn add_token(&mut self, token: Token) {
         self.tokens.push(token);
     }
 }
@@ -160,6 +212,10 @@ mod tests {
         format!("{:#?} {} null", ty, lexeme)
     }
 
+    fn token_repr_lit(ty: TokenType, lexeme: &str, literal: &str) -> String {
+        format!("{:#?} {} {}", ty, lexeme, literal)
+    }
+
     #[test]
     fn get_token_single_char_delimiters() {
         let cases = [
@@ -175,7 +231,7 @@ mod tests {
             ('*', TokenType::STAR, "*", 1),
         ];
         for (ch, ty, lex, skip) in cases {
-            let (tok, n) = Scanner::get_token(&ch, &0, String::new()).unwrap();
+            let (tok, n) = Scanner::get_token(&ch, &0, &0, String::new()).unwrap().unwrap();
             assert_eq!(n, skip);
             assert_eq!(tok.to_string(), token_repr(ty, lex));
         }
@@ -183,14 +239,14 @@ mod tests {
 
     #[test]
     fn get_token_slash_alone() {
-        let (tok, n) = Scanner::get_token(&'/', &0, "x".to_string()).unwrap();
+        let (tok, n) = Scanner::get_token(&'/', &0, &0, "x".to_string()).unwrap().unwrap();
         assert_eq!(n, 1);
         assert_eq!(tok.to_string(), token_repr(TokenType::SLASH, "/"));
     }
 
     #[test]
     fn get_token_slash_starts_comment() {
-        assert!(Scanner::get_token(&'/', &0, "/rest".to_string()).is_err());
+        assert!(Scanner::get_token(&'/', &0, &0, "/rest".to_string()).is_err());
     }
 
     #[test]
@@ -202,7 +258,7 @@ mod tests {
             ('<', "=x", TokenType::LESS_EQUAL, "<=", 2),
         ];
         for (ch, rest, ty, lex, skip) in cases {
-            let (tok, n) = Scanner::get_token(&ch, &0, rest.to_string()).unwrap();
+            let (tok, n) = Scanner::get_token(&ch, &0, &0, rest.to_string()).unwrap().unwrap();
             assert_eq!(n, skip, "lexeme {lex}");
             assert_eq!(tok.to_string(), token_repr(ty, lex));
         }
@@ -217,7 +273,7 @@ mod tests {
             ('<', TokenType::LESS, "<", 1, "x"),
         ];
         for (ch, ty, lex, skip, rest) in singles {
-            let (tok, n) = Scanner::get_token(&ch, &0, rest.to_string()).unwrap();
+            let (tok, n) = Scanner::get_token(&ch, &0, &0, rest.to_string()).unwrap().unwrap();
             assert_eq!(n, skip);
             assert_eq!(tok.to_string(), token_repr(ty, lex));
         }
@@ -225,16 +281,15 @@ mod tests {
 
     #[test]
     fn get_token_one_char_at_end_of_line() {
-        let (tok, n) = Scanner::get_token(&'=', &3, String::new()).unwrap();
+        let (tok, n) = Scanner::get_token(&'=', &3, &0, String::new()).unwrap().unwrap();
         assert_eq!(n, 1);
         assert_eq!(tok.to_string(), token_repr(TokenType::EQUAL, "="));
     }
 
     #[test]
     fn get_token_rejects_unknown() {
-        assert!(matches!(Scanner::get_token(&'a', &0, String::new()), Err(false)));
-        assert!(matches!(Scanner::get_token(&' ', &0, String::new()), Err(false)));
-        assert!(matches!(Scanner::get_token(&'"', &0, String::new()), Err(false)));
+        assert!(matches!(Scanner::get_token(&'a', &0, &0, String::new()), Err((false, None))));
+        assert!(matches!(Scanner::get_token(&'@', &0, &0, String::new()), Err((false, None))));
     }
 
     #[test]
@@ -383,16 +438,56 @@ mod tests {
 
     #[test]
     fn scan_whitespace_between_tokens_not_skipped_yet() {
-        // Space is not a valid token until whitespace handling exists.
         let mut s = Scanner::from_source("+ +");
-        assert_eq!(s.scan().unwrap(), 65);
+        assert_eq!(s.scan().unwrap(), 0);
+        assert_eq!(
+            s.token_lines(),
+            vec![
+                token_repr(TokenType::PLUS, "+"),
+                token_repr(TokenType::PLUS, "+"),
+                token_repr(TokenType::EOF, ""),
+            ]
+        );
     }
 
     #[test]
-    fn get_token_double_slash_lookahead_at_nonzero_offset() {
-        let line = "x//";
-        let ix = line.find('/').unwrap();
-        let rest: String = line.chars().skip(ix + 1).collect();
-        assert!(Scanner::get_token(&'/', &ix, rest).is_err());
+    fn scan_ignores_spaces_tabs_and_carriage_returns() {
+        let mut s = Scanner::from_source(" \t \r\t  \r");
+        assert_eq!(s.scan().unwrap(), 0);
+        assert_eq!(s.token_lines(), vec![token_repr(TokenType::EOF, "")]);
+    }
+
+    #[test]
+    fn scan_ignores_whitespace_across_lines() {
+        // Includes tabs and Windows-style CRLF. `lines()` strips line terminators, but `\t` remains.
+        let mut s = Scanner::from_source(" \t\r\n\t \n  \r\n");
+        assert_eq!(s.scan().unwrap(), 0);
+        assert_eq!(s.token_lines(), vec![token_repr(TokenType::EOF, "")]);
+    }
+
+    #[test]
+    fn scan_string_literal_tokenizes_lexeme_and_literal() {
+        let mut s = Scanner::from_source("\"hello\"");
+        assert_eq!(s.scan().unwrap(), 0);
+        assert_eq!(
+            s.token_lines(),
+            vec![
+                token_repr_lit(TokenType::STRING, "\"hello\"", "hello"),
+                token_repr(TokenType::EOF, ""),
+            ]
+        );
+    }
+
+    #[test]
+    fn scan_string_literal_allows_spaces_and_tabs_inside() {
+        let mut s = Scanner::from_source("\"a b\tc\"");
+        assert_eq!(s.scan().unwrap(), 0);
+        assert_eq!(
+            s.token_lines(),
+            vec![
+                token_repr_lit(TokenType::STRING, "\"a b\tc\"", "a b\tc"),
+                token_repr(TokenType::EOF, ""),
+            ]
+        );
     }
 }
