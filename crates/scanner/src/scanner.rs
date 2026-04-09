@@ -503,9 +503,59 @@ mod tests {
         assert_eq!(
             s.token_lines(),
             vec![
-                token_repr_lit(TokenType::NUMBER, "1", "1"),
+                token_repr_lit(TokenType::NUMBER, "1", "1.0"),
                 token_repr(TokenType::SLASH, "/"),
-                token_repr_lit(TokenType::NUMBER, "2", "2"),
+                token_repr_lit(TokenType::NUMBER, "2", "2.0"),
+                token_repr(TokenType::EOF, ""),
+            ]
+        );
+    }
+
+    #[test]
+    fn get_token_number_single_digit() {
+        let (tok, n) = Scanner::get_token(&'5', &0, &0, String::new()).unwrap().unwrap();
+        assert_eq!(n, 1);
+        assert_eq!(tok.to_string(), token_repr_lit(TokenType::NUMBER, "5", "5.0"));
+    }
+
+    #[test]
+    fn get_token_number_multi_digit_and_skip() {
+        let (tok, n) = Scanner::get_token(&'1', &0, &0, "234+".to_string()).unwrap().unwrap();
+        assert_eq!(n, 4);
+        assert_eq!(tok.to_string(), token_repr_lit(TokenType::NUMBER, "1234", "1234.0"));
+    }
+
+    #[test]
+    fn get_token_number_decimal() {
+        let (tok, n) = Scanner::get_token(&'3', &0, &0, ".14)".to_string()).unwrap().unwrap();
+        assert_eq!(n, 4);
+        assert_eq!(tok.to_string(), token_repr_lit(TokenType::NUMBER, "3.14", "3.14"));
+    }
+
+    #[test]
+    fn get_token_number_trims_fraction_trailing_zeros() {
+        let (tok, n) = Scanner::get_token(&'1', &0, &0, ".2000x".to_string()).unwrap().unwrap();
+        assert_eq!(n, 6);
+        assert_eq!(tok.to_string(), token_repr_lit(TokenType::NUMBER, "1.2000", "1.2"));
+    }
+
+    #[test]
+    fn get_token_number_fraction_all_zeros_becomes_dot_zero() {
+        let (tok, n) = Scanner::get_token(&'9', &0, &0, ".000".to_string()).unwrap().unwrap();
+        assert_eq!(n, 5);
+        assert_eq!(tok.to_string(), token_repr_lit(TokenType::NUMBER, "9.000", "9.0"));
+    }
+
+    #[test]
+    fn scan_numbers_separated_by_whitespace() {
+        let mut s = Scanner::from_source("42  99.5 ;");
+        assert_eq!(s.scan().unwrap(), 0);
+        assert_eq!(
+            s.token_lines(),
+            vec![
+                token_repr_lit(TokenType::NUMBER, "42", "42.0"),
+                token_repr_lit(TokenType::NUMBER, "99.5", "99.5"),
+                token_repr(TokenType::SEMICOLON, ";"),
                 token_repr(TokenType::EOF, ""),
             ]
         );
