@@ -36,7 +36,6 @@ impl Scanner {
         }
 
         let source = self.source.clone();
-        // println!("source: {source}");
         let mut exit_code = 0;
 
         for (line_ix, lines) in source.lines().enumerate() {
@@ -94,51 +93,51 @@ impl Scanner {
 
         let (token_ty, lexeam, to_skip, literal) = match c {
             // Single tokens
-            '(' => (TokenType::LEFT_PAREN, "(".to_string(), 1, "null".to_string()),
-            ')' => (TokenType::RIGHT_PAREN, ")".to_string(), 1, "null".to_string()),
-            '{' => (TokenType::LEFT_BRACE, "{".to_string(), 1, "null".to_string()),
-            '}' => (TokenType::RIGHT_BRACE, "}".to_string(), 1, "null".to_string()),
-            ',' => (TokenType::COMMA, ",".to_string(), 1, "null".to_string()),
-            '.' => (TokenType::DOT, ".".to_string(), 1, "null".to_string()),
-            '-' => (TokenType::MINUS, "-".to_string(), 1, "null".to_string()),
-            '+' => (TokenType::PLUS, "+".to_string(), 1, "null".to_string()),
-            ';' => (TokenType::SEMICOLON, ";".to_string(), 1, "null".to_string()),
-            '*' => (TokenType::STAR, "*".to_string(), 1, "null".to_string()),
+            '(' => (TokenType::LEFT_PAREN, "(".to_string(), 1, NULL.to_string()),
+            ')' => (TokenType::RIGHT_PAREN, ")".to_string(), 1, NULL.to_string()),
+            '{' => (TokenType::LEFT_BRACE, "{".to_string(), 1, NULL.to_string()),
+            '}' => (TokenType::RIGHT_BRACE, "}".to_string(), 1, NULL.to_string()),
+            ',' => (TokenType::COMMA, ",".to_string(), 1, NULL.to_string()),
+            '.' => (TokenType::DOT, ".".to_string(), 1, NULL.to_string()),
+            '-' => (TokenType::MINUS, "-".to_string(), 1, NULL.to_string()),
+            '+' => (TokenType::PLUS, "+".to_string(), 1, NULL.to_string()),
+            ';' => (TokenType::SEMICOLON, ";".to_string(), 1, NULL.to_string()),
+            '*' => (TokenType::STAR, "*".to_string(), 1, NULL.to_string()),
 
             // Single-double tokens
             '=' => {
                 if Self::match_next(&mut rest_peekable, '=') {
-                    (TokenType::EQUAL_EQUAL, "==".to_string(), 2, "null".to_string())
+                    (TokenType::EQUAL_EQUAL, "==".to_string(), 2, NULL.to_string())
                 } else {
-                    (TokenType::EQUAL, "=".to_string(), 1, "null".to_string())
+                    (TokenType::EQUAL, "=".to_string(), 1, NULL.to_string())
                 }
             }
             '!' => {
                 if Self::match_next(&mut rest_peekable, '=') {
-                    (TokenType::BANG_EQUAL, "!=".to_string(), 2, "null".to_string())
+                    (TokenType::BANG_EQUAL, "!=".to_string(), 2, NULL.to_string())
                 } else {
-                    (TokenType::BANG, "!".to_string(), 1, "null".to_string())
+                    (TokenType::BANG, "!".to_string(), 1, NULL.to_string())
                 }
             }
             '>' => {
                 if Self::match_next(&mut rest_peekable, '=') {
-                    (TokenType::GREATER_EQUAL, ">=".to_string(), 2, "null".to_string())
+                    (TokenType::GREATER_EQUAL, ">=".to_string(), 2, NULL.to_string())
                 } else {
-                    (TokenType::GREATER, ">".to_string(), 1, "null".to_string())
+                    (TokenType::GREATER, ">".to_string(), 1, NULL.to_string())
                 }
             }
             '<' => {
                 if Self::match_next(&mut rest_peekable, '=') {
-                    (TokenType::LESS_EQUAL, "<=".to_string(), 2, "null".to_string())
+                    (TokenType::LESS_EQUAL, "<=".to_string(), 2, NULL.to_string())
                 } else {
-                    (TokenType::LESS, "<".to_string(), 1, "null".to_string())
+                    (TokenType::LESS, "<".to_string(), 1, NULL.to_string())
                 }
             }
             '/' => {
                 if Self::match_next(&mut rest_peekable, '/') {
                     return Err((true, None, ScannerError::UnexpectedCharacter { c: '/' }));
                 } else {
-                    (TokenType::SLASH, "/".to_string(), 1, "null".to_string())
+                    (TokenType::SLASH, "/".to_string(), 1, NULL.to_string())
                 }
             }
 
@@ -206,7 +205,7 @@ impl Scanner {
 
                 let lexeme_len = lexeme.len();
 
-                (TokenType::from_identifier(&lexeme), lexeme, lexeme_len, "null".to_string())
+                (TokenType::from_identifier(&lexeme), lexeme, lexeme_len, NULL.to_string())
             }
             _ => return Err((false, None, ScannerError::UnexpectedCharacter { c: *c })),
         };
