@@ -10,12 +10,20 @@ pub enum Expr {
         expression: Box<Expr>,
     },
     Literal {
-        value: String,
+        value: Literal,
     },
     Unary {
         operator: Token,
         right: Box<Expr>,
     },
+}
+
+pub enum Literal {
+    Number(String),
+    String(String),
+    True,
+    False,
+    Nil,
 }
 
 pub fn evaluate(expr: &Expr) {
