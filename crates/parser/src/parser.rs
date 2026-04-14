@@ -1,4 +1,4 @@
-use crate::ast::Expr;
+use crate::ast::{Expr, Literal};
 use std::iter::{Enumerate, Peekable};
 use std::slice::Iter;
 
@@ -74,6 +74,31 @@ impl<'a> Parser<'a> {
     }
 
     fn unary(&mut self) -> Expr {
+        if self.match_any(&[BANG, MINUS]) {
+            let operator = self.prev().clone();
+            let right = self.unary();
+            return Expr::new_unary(operator, right);
+        }
+
+        self.primary()
+    }
+
+    fn primary(&mut self) -> Expr {
+        if self.check(&FALSE) {
+            return Expr::new_primary(Literal::False);
+        }
+        if self.check(&TRUE) {
+            return Expr::new_primary(Literal::True);
+        }
+
+        if self.check(&NUMBER) {
+            return Expr::new_primary(Literal::Number(self.prev().literal.clone()));
+        }
+
+        if self.check(&STRING) {
+            return Expr::new_primary(Literal::String(self.prev().literal.clone()));
+        }
+
         todo!()
     }
 
@@ -90,7 +115,7 @@ impl<'a> Parser<'a> {
 
     fn check(&mut self, is_token: &TokenType) -> bool {
         if let Some((_, token)) = self.tokens_peekable.peek()
-            && is_token == token.get_type()
+            && is_token == &token.token_ty
             && !self.is_at_end()
         {
             return true;

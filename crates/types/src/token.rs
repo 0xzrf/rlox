@@ -2,11 +2,11 @@ use crate::TokenType;
 
 #[derive(Clone)]
 pub struct Token {
-    token_ty: TokenType,
-    line: usize,
-    line_offset: usize,
-    lexeme: String,
-    literal: String,
+    pub token_ty: TokenType,
+    pub line: usize,
+    pub line_offset: usize,
+    pub lexeme: String,
+    pub literal: String,
 }
 
 impl PartialEq for Token {
@@ -30,10 +30,6 @@ impl Token {
             line_offset,
             literal,
         }
-    }
-
-    pub fn get_type(&self) -> &TokenType {
-        &self.token_ty
     }
 
     pub fn to_string(&self) -> String {

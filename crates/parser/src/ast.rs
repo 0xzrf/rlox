@@ -49,6 +49,14 @@ impl Expr {
             right: Box::new(right),
         }
     }
+
+    pub fn new_unary(operator: Token, right: Self) -> Self {
+        Expr::Unary { operator, right: Box::new(right) }
+    }
+
+    pub fn new_primary(value: Literal) -> Self {
+        Expr::Literal { value }
+    }
 }
 
 // Presedence and associative rules for this context-free grammer
