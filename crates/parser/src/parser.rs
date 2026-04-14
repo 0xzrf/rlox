@@ -101,6 +101,7 @@ impl<'a> Parser<'a> {
 
         if self.check(&LEFT_PAREN) {
             let expr = self.expression();
+
             return Expr::new_grouping(expr);
         }
 
@@ -128,8 +129,8 @@ impl<'a> Parser<'a> {
         false
     }
 
-    fn advance(&mut self) {
-        self.tokens_peekable.next();
+    fn advance(&mut self) -> Option<(usize, &Token)> {
+        self.tokens_peekable.next()
     }
 
     fn is_at_end(&mut self) -> bool {
