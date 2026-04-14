@@ -57,6 +57,10 @@ impl Expr {
     pub fn new_primary(value: Literal) -> Self {
         Expr::Literal { value }
     }
+
+    pub fn new_grouping(expr: Expr) -> Self {
+        Expr::Grouping { expression: Box::new(expr) }
+    }
 }
 
 // Presedence and associative rules for this context-free grammer

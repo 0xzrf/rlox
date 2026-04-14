@@ -99,7 +99,12 @@ impl<'a> Parser<'a> {
             return Expr::new_primary(Literal::String(self.prev().literal.clone()));
         }
 
-        todo!()
+        if self.check(&LEFT_PAREN) {
+            let expr = self.expression();
+            return Expr::new_grouping(expr);
+        }
+
+        unreachable!() // TODO: Need to implement syntax error
     }
 
     fn match_any(&mut self, tokens: &[TokenType]) -> bool {
