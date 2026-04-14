@@ -1,5 +1,6 @@
 use crate::TokenType;
 
+#[derive(Clone)]
 pub struct Token {
     token_ty: TokenType,
     line: usize,
@@ -29,6 +30,10 @@ impl Token {
             line_offset,
             literal,
         }
+    }
+
+    pub fn get_type(&self) -> &TokenType {
+        &self.token_ty
     }
 
     pub fn to_string(&self) -> String {

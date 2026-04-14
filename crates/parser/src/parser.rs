@@ -1,17 +1,21 @@
 use std::iter::{Enumerate, Peekable};
 use std::slice::Iter;
 
-use interpreter_types::Token;
+use interpreter_types::{Token, TokenType};
 
 pub struct Parser<'a> {
-    tokens: Peekable<Enumerate<Iter<'a, Token>>>,
+    tokens_peekable: Peekable<Enumerate<Iter<'a, Token>>>,
+    original_tokens: Vec<Token>,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(tokens: &'a [Token]) -> Self {
-        let tokens = tokens.iter().enumerate().peekable();
+        let tokens_peekable = tokens.iter().enumerate().peekable();
 
-        Self { tokens }
+        Self {
+            tokens_peekable,
+            original_tokens: tokens.to_vec(),
+        }
     }
 
     fn expression(&mut self) {}
@@ -28,8 +32,9 @@ impl<'a> Parser<'a> {
     }
 
     fn check(&mut self, is_token: &Token) -> bool {
-        if let Some((_, token)) = self.tokens.peek()
+        if let Some((_, token)) = self.tokens_peekable.peek()
             && is_token == *token
+            && !self.is_at_end()
         {
             return true;
         }
@@ -37,6 +42,20 @@ impl<'a> Parser<'a> {
     }
 
     fn advance(&mut self) {
-        self.tokens.next();
+        self.tokens_peekable.next();
+    }
+
+    fn is_at_end(&mut self) -> bool {
+        if let Some((_, token)) = self.tokens_peekable.peek()
+            && *token.get_type() == TokenType::EOF
+        {
+            return true;
+        }
+        false
+    }
+
+    fn prev(&mut self) -> &Token {
+        let next = self.tokens_peekable.peek().unwrap().0;
+        &self.original_tokens[next - 1]
     }
 }
