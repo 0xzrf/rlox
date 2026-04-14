@@ -38,6 +38,42 @@ impl<'a> Parser<'a> {
     }
 
     fn comparision(&mut self) -> Expr {
+        let mut expr = self.term();
+
+        while self.match_any(&[GREATER, GREATER_EQUAL, LESS, LESS_EQUAL]) {
+            let operator = self.prev().clone();
+            let right = self.term();
+            expr = Expr::new_binary(expr, operator, right)
+        }
+
+        expr
+    }
+
+    fn term(&mut self) -> Expr {
+        let mut expr = self.factor();
+
+        while self.match_any(&[MINUS, PLUS]) {
+            let operator = self.prev().clone();
+            let right = self.factor();
+            expr = Expr::new_binary(expr, operator, right)
+        }
+
+        expr
+    }
+
+    fn factor(&mut self) -> Expr {
+        let mut expr = self.unary();
+
+        while self.match_any(&[SLASH, STAR]) {
+            let operator = self.prev().clone();
+            let right = self.unary();
+            expr = Expr::new_binary(expr, operator, right)
+        }
+
+        expr
+    }
+
+    fn unary(&mut self) -> Expr {
         todo!()
     }
 
