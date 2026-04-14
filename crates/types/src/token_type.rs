@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum TokenType {
     // Single-character tokens
     LEFT_PAREN,
@@ -48,7 +48,6 @@ pub enum TokenType {
 
     EOF,
 }
-
 
 impl TokenType {
     pub fn from_identifier(target: &str) -> TokenType {

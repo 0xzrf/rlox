@@ -8,6 +8,11 @@ pub struct Token {
     literal: String,
 }
 
+impl PartialEq for Token {
+    fn eq(&self, other: &Self) -> bool {
+        self.token_ty == other.token_ty
+    }
+}
 
 impl Token {
     pub fn new(
