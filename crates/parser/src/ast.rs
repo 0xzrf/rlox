@@ -41,6 +41,16 @@ pub fn evaluate(expr: &Expr) {
     }
 }
 
+impl Expr {
+    pub fn new_binary(left: Expr, operator: Token, right: Expr) -> Self {
+        Expr::Binary {
+            left: Box::new(left),
+            operator,
+            right: Box::new(right),
+        }
+    }
+}
+
 // Presedence and associative rules for this context-free grammer
 // expression     → equality ;
 // equality       → comparison ( ( "!=" | "==" ) comparison )* ;

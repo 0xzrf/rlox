@@ -1,7 +1,11 @@
+use crate::ast::Expr;
 use std::iter::{Enumerate, Peekable};
 use std::slice::Iter;
 
-use interpreter_types::{Token, TokenType};
+use interpreter_types::{
+    Token,
+    TokenType::{self, *},
+};
 
 pub struct Parser<'a> {
     tokens_peekable: Peekable<Enumerate<Iter<'a, Token>>>,
@@ -18,9 +22,26 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn expression(&mut self) {}
+    fn expression(&mut self) -> Expr {
+        self.equality()
+    }
 
-    fn match_any(&mut self, tokens: &[Token]) -> bool {
+    fn equality(&mut self) -> Expr {
+        let mut expr = self.comparision();
+
+        while self.match_any(&[BANG_EQUAL, EQUAL_EQUAL]) {
+            let operator = self.prev().clone();
+            let right = self.comparision();
+            expr = Expr::new_binary(expr, operator, right)
+        }
+        expr
+    }
+
+    fn comparision(&mut self) -> Expr {
+        todo!()
+    }
+
+    fn match_any(&mut self, tokens: &[TokenType]) -> bool {
         for token in tokens {
             if self.check(token) {
                 self.advance();
@@ -31,9 +52,9 @@ impl<'a> Parser<'a> {
         false
     }
 
-    fn check(&mut self, is_token: &Token) -> bool {
+    fn check(&mut self, is_token: &TokenType) -> bool {
         if let Some((_, token)) = self.tokens_peekable.peek()
-            && is_token == *token
+            && is_token == token.get_type()
             && !self.is_at_end()
         {
             return true;
@@ -46,12 +67,7 @@ impl<'a> Parser<'a> {
     }
 
     fn is_at_end(&mut self) -> bool {
-        if let Some((_, token)) = self.tokens_peekable.peek()
-            && *token.get_type() == TokenType::EOF
-        {
-            return true;
-        }
-        false
+        self.check(&EOF)
     }
 
     fn prev(&mut self) -> &Token {
