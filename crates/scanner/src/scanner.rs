@@ -28,11 +28,11 @@ impl Scanner {
         }
     }
 
-    pub fn scan(&mut self) -> Result<i32, String> {
+    pub fn scan(mut self) -> Result<(Scanner, i32), String> {
         if self.source.is_empty() {
             self.add_token(Token::new(TokenType::EOF, 0, "".to_string(), 0, NULL.to_string()));
             self.print_tokens();
-            return Ok(0);
+            return Ok((self, 0));
         }
 
         let source = self.source.clone();
@@ -80,7 +80,7 @@ impl Scanner {
         self.add_token(Token::new(TokenType::EOF, 0, "".to_string(), 0, NULL.to_string()));
         self.print_tokens();
 
-        Ok(exit_code)
+        Ok((self, exit_code))
     }
 
     fn get_token(
@@ -268,6 +268,10 @@ impl Scanner {
     fn add_token(&mut self, token: Token) {
         self.tokens.push(token);
     }
+
+    pub fn get_tokens(&self) -> Vec<Token> {
+        self.tokens.clone()
+    }
 }
 
 #[cfg(test)]
@@ -408,8 +412,9 @@ mod tests {
 
     #[test]
     fn scan_identifier_foo_then_eof() {
-        let mut s = Scanner::from_source("foo");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("foo");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
             vec![token_repr(TokenType::IDENTIFIER, "foo"), token_repr(TokenType::EOF, ""),]
@@ -418,8 +423,9 @@ mod tests {
 
     #[test]
     fn scan_identifiers_separated_by_whitespace() {
-        let mut s = Scanner::from_source("foo  bar_baz");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("foo  bar_baz");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
             vec![
@@ -432,8 +438,9 @@ mod tests {
 
     #[test]
     fn scan_identifier_before_punctuation() {
-        let mut s = Scanner::from_source("print();");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("print();");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
             vec![
@@ -478,8 +485,9 @@ mod tests {
 
     #[test]
     fn scan_line_of_keywords() {
-        let mut s = Scanner::from_source("if else while true false nil var");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("if else while true false nil var");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
             vec![
@@ -498,8 +506,9 @@ mod tests {
     #[test]
     fn scan_keyword_prefix_stays_identifier() {
         // "orchid" is not `or`; "whiley" is not `while`.
-        let mut s = Scanner::from_source("orchid whiley");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("orchid whiley");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
             vec![
@@ -512,15 +521,17 @@ mod tests {
 
     #[test]
     fn scan_empty_source_eof_only() {
-        let mut s = Scanner::from_source("");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(s.token_lines(), vec![token_repr(TokenType::EOF, "")]);
     }
 
     #[test]
     fn scan_parentheses() {
-        let mut s = Scanner::from_source("()");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("()");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
             vec![
@@ -533,8 +544,9 @@ mod tests {
 
     #[test]
     fn scan_line_comment_ignores_rest_of_line() {
-        let mut s = Scanner::from_source("()// Comment");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("()// Comment");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
             vec![
@@ -547,8 +559,9 @@ mod tests {
 
     #[test]
     fn scan_comment_only_line_then_tokens() {
-        let mut s = Scanner::from_source("// only comment\n()");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("// only comment\n()");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
             vec![
@@ -561,8 +574,9 @@ mod tests {
 
     #[test]
     fn scan_comment_stops_at_line_break() {
-        let mut s = Scanner::from_source("// a\n+");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("// a\n+");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
             vec![token_repr(TokenType::PLUS, "+"), token_repr(TokenType::EOF, ""),]
@@ -571,8 +585,9 @@ mod tests {
 
     #[test]
     fn scan_unexpected_character_sets_exit_65_and_continues() {
-        let mut s = Scanner::from_source("(@)");
-        assert_eq!(s.scan().unwrap(), 65);
+        let s = Scanner::from_source("(@)");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 65);
         assert_eq!(
             s.token_lines(),
             vec![
@@ -591,16 +606,18 @@ mod tests {
             ("<=", TokenType::LESS_EQUAL, "<="),
             (">=", TokenType::GREATER_EQUAL, ">="),
         ] {
-            let mut s = Scanner::from_source(src);
-            assert_eq!(s.scan().unwrap(), 0, "source {src:?}");
+            let s = Scanner::from_source(src);
+            let (s, exit) = s.scan().unwrap();
+            assert_eq!(exit, 0, "source {src:?}");
             assert_eq!(s.token_lines(), vec![token_repr(ty, lex), token_repr(TokenType::EOF, "")]);
         }
     }
 
     #[test]
     fn scan_braces_commas_and_dots() {
-        let mut s = Scanner::from_source("{,}.");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("{,}.");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
             vec![
@@ -615,8 +632,9 @@ mod tests {
 
     #[test]
     fn scan_arithmetic_punctuation() {
-        let mut s = Scanner::from_source("+-;*");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("+-;*");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
             vec![
@@ -632,8 +650,9 @@ mod tests {
     #[test]
     fn scan_chained_comparison_without_bang() {
         // `==<=>=` — no leading `!=`, so `rest_of_line` / peek behavior is easy to reason about.
-        let mut s = Scanner::from_source("==<=>=");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("==<=>=");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
             vec![
@@ -647,8 +666,9 @@ mod tests {
 
     #[test]
     fn scan_slash_not_comment_when_single() {
-        let mut s = Scanner::from_source("1/2");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("1/2");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
             vec![
@@ -697,8 +717,9 @@ mod tests {
 
     #[test]
     fn scan_numbers_separated_by_whitespace() {
-        let mut s = Scanner::from_source("42  99.5 ;");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("42  99.5 ;");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
             vec![
@@ -712,8 +733,9 @@ mod tests {
 
     #[test]
     fn scan_whitespace_between_tokens_not_skipped_yet() {
-        let mut s = Scanner::from_source("+ +");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("+ +");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
             vec![
@@ -726,23 +748,26 @@ mod tests {
 
     #[test]
     fn scan_ignores_spaces_tabs_and_carriage_returns() {
-        let mut s = Scanner::from_source(" \t \r\t  \r");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source(" \t \r\t  \r");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(s.token_lines(), vec![token_repr(TokenType::EOF, "")]);
     }
 
     #[test]
     fn scan_ignores_whitespace_across_lines() {
         // Includes tabs and Windows-style CRLF. `lines()` strips line terminators, but `\t` remains.
-        let mut s = Scanner::from_source(" \t\r\n\t \n  \r\n");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source(" \t\r\n\t \n  \r\n");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(s.token_lines(), vec![token_repr(TokenType::EOF, "")]);
     }
 
     #[test]
     fn scan_string_literal_tokenizes_lexeme_and_literal() {
-        let mut s = Scanner::from_source("\"hello\"");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("\"hello\"");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
             vec![
@@ -754,8 +779,9 @@ mod tests {
 
     #[test]
     fn scan_string_literal_allows_spaces_and_tabs_inside() {
-        let mut s = Scanner::from_source("\"a b\tc\"");
-        assert_eq!(s.scan().unwrap(), 0);
+        let s = Scanner::from_source("\"a b\tc\"");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
             vec![
@@ -767,22 +793,25 @@ mod tests {
 
     #[test]
     fn scan_unterminated_string_line_no_closing_quote() {
-        let mut s = Scanner::from_source("\"hello");
-        assert_eq!(s.scan().unwrap(), 65);
+        let s = Scanner::from_source("\"hello");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 65);
         assert_eq!(s.token_lines(), vec![token_repr(TokenType::EOF, "")]);
     }
 
     #[test]
     fn scan_unterminated_string_only_opening_quote() {
-        let mut s = Scanner::from_source("\"");
-        assert_eq!(s.scan().unwrap(), 65);
+        let s = Scanner::from_source("\"");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 65);
         assert_eq!(s.token_lines(), vec![token_repr(TokenType::EOF, "")]);
     }
 
     #[test]
     fn scan_unterminated_string_after_valid_literal_and_semicolon() {
-        let mut s = Scanner::from_source("\"baz\" ; \"unterminated");
-        assert_eq!(s.scan().unwrap(), 65);
+        let s = Scanner::from_source("\"baz\" ; \"unterminated");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 65);
         assert_eq!(
             s.token_lines(),
             vec![
@@ -795,8 +824,9 @@ mod tests {
 
     #[test]
     fn scan_unterminated_string_after_another_string() {
-        let mut s = Scanner::from_source("\"a\" \"b");
-        assert_eq!(s.scan().unwrap(), 65);
+        let s = Scanner::from_source("\"a\" \"b");
+        let (s, exit) = s.scan().unwrap();
+        assert_eq!(exit, 65);
         assert_eq!(
             s.token_lines(),
             vec![token_repr_lit(TokenType::STRING, "\"a\"", "a"), token_repr(TokenType::EOF, ""),]

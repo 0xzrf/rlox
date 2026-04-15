@@ -5,5 +5,9 @@ edition.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-interpreter-types = {workspace = true}
-thiserror = {workspace = true}
+interpreter-types = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = "1.4.1"
+scanner = { workspace = true }

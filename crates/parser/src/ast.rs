@@ -1,5 +1,6 @@
 use interpreter_types::Token;
 
+#[derive(Debug)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,
@@ -18,6 +19,7 @@ pub enum Expr {
     },
 }
 
+#[derive(Debug)]
 pub enum Literal {
     Number(String),
     String(String),

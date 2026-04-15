@@ -15,14 +15,14 @@ impl Commands {
     pub fn handle_command(&self) -> InterpreterErrors<i32> {
         match self.cmd.as_str() {
             "tokenize" => {
-                let mut scanner = Scanner::new(self.file_path.clone());
+                let scanner = Scanner::new(self.file_path.clone());
 
                 match scanner.scan() {
-                    Ok(error_code) => Ok(error_code),
+                    Ok((_scanner, error_code)) => Ok(error_code),
                     Err(e) => Err(CliErrors::ScannerError { reason: e }),
                 }
             }
-            _ => return Err(CliErrors::InvalidCommand),
+            _ => Err(CliErrors::InvalidCommand),
         }
     }
 }

@@ -23,8 +23,8 @@ impl<'a> Parser<'a> {
     }
 
     /// The top level interface to create the syntax tree
-    pub fn parse(&mut self) -> Option<Expr> {
-        self.expression().ok()
+    pub fn parse(&mut self) -> ParserResult<Expr> {
+        self.expression()
     }
 
     fn expression(&mut self) -> ParserResult<Expr> {
