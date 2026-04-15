@@ -12,4 +12,7 @@ pub enum CliErrors {
 
     #[error("Scanner Error: {}", reason)]
     ScannerError { reason: String },
+
+    #[error("Parser Error: {}", reason)]
+    ParserError { reason: String },
 }
