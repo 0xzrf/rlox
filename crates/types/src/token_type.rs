@@ -71,4 +71,9 @@ impl TokenType {
             _ => TokenType::IDENTIFIER,
         }
     }
+
+    pub fn is_token_starting_stmt(token_ty: &TokenType) -> bool {
+        use TokenType::*;
+        matches!(token_ty, CLASS | FUN | VAR | FOR | IF | WHILE | PRINT | RETURN)
+    }
 }
