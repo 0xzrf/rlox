@@ -291,4 +291,30 @@ mod tests {
         let msg = parse_err(")");
         assert!(msg.contains("Expected an expression"), "unexpected error message: {msg}");
     }
+
+    #[test]
+    fn unary_minus_applies_to_grouping() {
+        assert_eq!(parse_to_ast("-(1 + 2)"), "(- (group (+ 1.0 2.0)))");
+    }
+
+    #[test]
+    fn equality_binds_looser_than_addition() {
+        assert_eq!(parse_to_ast("1 + 2 == 3"), "(== (+ 1.0 2.0) 3.0)");
+    }
+
+    #[test]
+    fn factor_is_left_associative() {
+        assert_eq!(parse_to_ast("24 / 3 / 2"), "(/ (/ 24.0 3.0) 2.0)");
+    }
+
+    #[test]
+    fn parses_string_equality() {
+        assert_eq!(parse_to_ast("\"a\" == \"b\""), "(== \"a\" \"b\")");
+    }
+
+    #[test]
+    fn errors_on_lone_unary_operator() {
+        let msg = parse_err("!");
+        assert!(msg.contains("Expected an expression"), "unexpected error message: {msg}");
+    }
 }
