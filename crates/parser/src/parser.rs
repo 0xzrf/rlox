@@ -257,15 +257,38 @@ mod tests {
     #[test]
     fn errors_on_missing_right_paren() {
         let msg = parse_err("(1 + 2");
-        assert!(
-            msg.contains("Expect ')' after expression"),
-            "unexpected error message: {msg}"
-        );
+        assert!(msg.contains("Expect ')' after expression"), "unexpected error message: {msg}");
     }
 
     #[test]
     fn errors_on_empty_input() {
         let msg = parse_err("");
+        assert!(msg.contains("Expected an expression"), "unexpected error message: {msg}");
+    }
+
+    #[test]
+    fn parses_chained_unary() {
+        assert_eq!(parse_to_ast("!!true"), "(! (! true))");
+    }
+
+    #[test]
+    fn comparison_is_left_associative() {
+        assert_eq!(parse_to_ast("3 > 2 > 1"), "(> (> 3.0 2.0) 1.0)");
+    }
+
+    #[test]
+    fn comparison_binds_looser_than_addition() {
+        assert_eq!(parse_to_ast("1 + 2 < 4"), "(< (+ 1.0 2.0) 4.0)");
+    }
+
+    #[test]
+    fn parses_mixed_grouping_and_factor() {
+        assert_eq!(parse_to_ast("2 * (3 + 4)"), "(* 2.0 (group (+ 3.0 4.0)))");
+    }
+
+    #[test]
+    fn errors_on_unexpected_right_paren() {
+        let msg = parse_err(")");
         assert!(msg.contains("Expected an expression"), "unexpected error message: {msg}");
     }
 }
