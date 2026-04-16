@@ -5,3 +5,6 @@ mod parser_errors;
 
 pub use ast::*;
 pub use parser_errors::ParserResult;
+
+mod interpret;
+pub use interpret::Interpret;

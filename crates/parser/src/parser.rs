@@ -106,7 +106,7 @@ impl<'a> Parser<'a> {
 
         if self.match_any(&[LEFT_PAREN]) {
             let expr = self.expression()?;
-            self.consume(&TokenType::RIGHT_PAREN, "Expect ')' after expression")?;
+            self.consume(&RIGHT_PAREN, "Expect ')' after expression")?;
             return Ok(Expr::new_grouping(expr));
         }
 
@@ -335,10 +335,7 @@ mod tests {
 
     #[test]
     fn parses_long_left_associative_expression() {
-        assert_eq!(
-            parse_to_ast("1 + 2 * 3 + 4"),
-            "(+ (+ 1.0 (* 2.0 3.0)) 4.0)"
-        );
+        assert_eq!(parse_to_ast("1 + 2 * 3 + 4"), "(+ (+ 1.0 (* 2.0 3.0)) 4.0)");
     }
 
     #[test]
@@ -359,10 +356,7 @@ mod tests {
 
     #[test]
     fn parses_mixed_equality_chain() {
-        assert_eq!(
-            parse_to_ast("1 == 2 != 3"),
-            "(!= (== 1.0 2.0) 3.0)"
-        );
+        assert_eq!(parse_to_ast("1 == 2 != 3"), "(!= (== 1.0 2.0) 3.0)");
     }
 
     #[test]
