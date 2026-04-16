@@ -317,4 +317,33 @@ mod tests {
         let msg = parse_err("!");
         assert!(msg.contains("Expected an expression"), "unexpected error message: {msg}");
     }
+
+    #[test]
+    fn parses_bang_equal() {
+        assert_eq!(parse_to_ast("1 != 2"), "(!= 1.0 2.0)");
+    }
+
+    #[test]
+    fn parses_less_equal() {
+        assert_eq!(parse_to_ast("1 <= 2"), "(<= 1.0 2.0)");
+    }
+
+    #[test]
+    fn unary_binds_tighter_than_equality() {
+        assert_eq!(parse_to_ast("!false == true"), "(== (! false) true)");
+    }
+
+    #[test]
+    fn parses_long_left_associative_expression() {
+        assert_eq!(
+            parse_to_ast("1 + 2 * 3 + 4"),
+            "(+ (+ 1.0 (* 2.0 3.0)) 4.0)"
+        );
+    }
+
+    #[test]
+    fn errors_on_trailing_equality_operator() {
+        let msg = parse_err("true ==");
+        assert!(msg.contains("Expected an expression"), "unexpected error message: {msg}");
+    }
 }
