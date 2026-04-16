@@ -22,10 +22,11 @@ impl Scanner {
         let mut file = File::open(&source_file).expect("Failed to open source file");
         file.read_to_string(&mut source_buffer).expect("Failed to read source file");
 
-        Self {
-            source: source_buffer,
-            tokens: Vec::new(),
-        }
+        Self::_new(source_buffer)
+    }
+
+    pub fn _new(source_code: String) -> Self {
+        Self { source: source_code, tokens: Vec::new() }
     }
 
     pub fn scan(mut self, print_scanned: bool) -> Result<(Scanner, i32), String> {
