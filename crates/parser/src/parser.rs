@@ -194,3 +194,42 @@ impl<'a> Parser<'a> {
         &self.original_tokens[prev_ix]
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use scanner::Scanner;
+
+    use super::Parser;
+    use crate::AstPrinter;
+
+    fn parse_to_ast(source: &str) -> String {
+        let tokens = Scanner::_new(source.to_string()).scan(false).unwrap().0.get_tokens();
+        let expr = Parser::new(&tokens).parse().unwrap();
+        AstPrinter::print(&expr)
+    }
+
+    #[test]
+    fn parses_number_literal() {
+        assert_eq!(parse_to_ast("42"), "42.0");
+    }
+
+    #[test]
+    fn parses_string_literal() {
+        assert_eq!(parse_to_ast("\"hi\""), "\"hi\"");
+    }
+
+    #[test]
+    fn parses_unary_bang() {
+        assert_eq!(parse_to_ast("!true"), "(! true)");
+    }
+
+    #[test]
+    fn parses_left_associative_term() {
+        assert_eq!(parse_to_ast("10 - 3 - 2"), "(- (- 10.0 3.0) 2.0)");
+    }
+
+    #[test]
+    fn parses_factor_precedence_over_term() {
+        assert_eq!(parse_to_ast("8 / 2 * 3"), "(* (/ 8.0 2.0) 3.0)");
+    }
+}
