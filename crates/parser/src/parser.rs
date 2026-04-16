@@ -208,6 +208,12 @@ mod tests {
         AstPrinter::print(&expr)
     }
 
+    fn parse_err(source: &str) -> String {
+        let tokens = Scanner::_new(source.to_string()).scan(false).unwrap().0.get_tokens();
+        let err = Parser::new(&tokens).parse().unwrap_err();
+        err.to_string()
+    }
+
     #[test]
     fn parses_number_literal() {
         assert_eq!(parse_to_ast("42"), "42.0");
@@ -231,5 +237,35 @@ mod tests {
     #[test]
     fn parses_factor_precedence_over_term() {
         assert_eq!(parse_to_ast("8 / 2 * 3"), "(* (/ 8.0 2.0) 3.0)");
+    }
+
+    #[test]
+    fn parses_nested_grouping() {
+        assert_eq!(parse_to_ast("((1))"), "(group (group 1.0))");
+    }
+
+    #[test]
+    fn unary_minus_binds_tighter_than_multiplication() {
+        assert_eq!(parse_to_ast("-1 * 2"), "(* (- 1.0) 2.0)");
+    }
+
+    #[test]
+    fn equality_is_left_associative() {
+        assert_eq!(parse_to_ast("true == false == true"), "(== (== true false) true)");
+    }
+
+    #[test]
+    fn errors_on_missing_right_paren() {
+        let msg = parse_err("(1 + 2");
+        assert!(
+            msg.contains("Expect ')' after expression"),
+            "unexpected error message: {msg}"
+        );
+    }
+
+    #[test]
+    fn errors_on_empty_input() {
+        let msg = parse_err("");
+        assert!(msg.contains("Expected an expression"), "unexpected error message: {msg}");
     }
 }
