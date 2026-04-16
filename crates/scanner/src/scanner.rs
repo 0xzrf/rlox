@@ -28,10 +28,10 @@ impl Scanner {
         }
     }
 
-    pub fn scan(mut self) -> Result<(Scanner, i32), String> {
+    pub fn scan(mut self, print_scanned: bool) -> Result<(Scanner, i32), String> {
         if self.source.is_empty() {
             self.add_token(Token::new(TokenType::EOF, 0, "".to_string(), 0, NULL.to_string()));
-            self.print_tokens();
+            self.print_tokens(print_scanned);
             return Ok((self, 0));
         }
 
@@ -78,7 +78,7 @@ impl Scanner {
         }
 
         self.add_token(Token::new(TokenType::EOF, 0, "".to_string(), 0, NULL.to_string()));
-        self.print_tokens();
+        self.print_tokens(print_scanned);
 
         Ok((self, exit_code))
     }
@@ -259,9 +259,11 @@ impl Scanner {
         suffix
     }
 
-    fn print_tokens(&self) {
-        for token in &self.tokens {
-            println!("{}", token.to_string());
+    fn print_tokens(&self, print_scanned: bool) {
+        if print_scanned {
+            for token in &self.tokens {
+                println!("{}", token.to_string());
+            }
         }
     }
 
@@ -413,7 +415,7 @@ mod tests {
     #[test]
     fn scan_identifier_foo_then_eof() {
         let s = Scanner::from_source("foo");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
@@ -424,7 +426,7 @@ mod tests {
     #[test]
     fn scan_identifiers_separated_by_whitespace() {
         let s = Scanner::from_source("foo  bar_baz");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
@@ -439,7 +441,7 @@ mod tests {
     #[test]
     fn scan_identifier_before_punctuation() {
         let s = Scanner::from_source("print();");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
@@ -486,7 +488,7 @@ mod tests {
     #[test]
     fn scan_line_of_keywords() {
         let s = Scanner::from_source("if else while true false nil var");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
@@ -507,7 +509,7 @@ mod tests {
     fn scan_keyword_prefix_stays_identifier() {
         // "orchid" is not `or`; "whiley" is not `while`.
         let s = Scanner::from_source("orchid whiley");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
@@ -522,7 +524,7 @@ mod tests {
     #[test]
     fn scan_empty_source_eof_only() {
         let s = Scanner::from_source("");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(s.token_lines(), vec![token_repr(TokenType::EOF, "")]);
     }
@@ -530,7 +532,7 @@ mod tests {
     #[test]
     fn scan_parentheses() {
         let s = Scanner::from_source("()");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
@@ -545,7 +547,7 @@ mod tests {
     #[test]
     fn scan_line_comment_ignores_rest_of_line() {
         let s = Scanner::from_source("()// Comment");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
@@ -560,7 +562,7 @@ mod tests {
     #[test]
     fn scan_comment_only_line_then_tokens() {
         let s = Scanner::from_source("// only comment\n()");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
@@ -575,7 +577,7 @@ mod tests {
     #[test]
     fn scan_comment_stops_at_line_break() {
         let s = Scanner::from_source("// a\n+");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
@@ -586,7 +588,7 @@ mod tests {
     #[test]
     fn scan_unexpected_character_sets_exit_65_and_continues() {
         let s = Scanner::from_source("(@)");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 65);
         assert_eq!(
             s.token_lines(),
@@ -607,7 +609,7 @@ mod tests {
             (">=", TokenType::GREATER_EQUAL, ">="),
         ] {
             let s = Scanner::from_source(src);
-            let (s, exit) = s.scan().unwrap();
+            let (s, exit) = s.scan(false).unwrap();
             assert_eq!(exit, 0, "source {src:?}");
             assert_eq!(s.token_lines(), vec![token_repr(ty, lex), token_repr(TokenType::EOF, "")]);
         }
@@ -616,7 +618,7 @@ mod tests {
     #[test]
     fn scan_braces_commas_and_dots() {
         let s = Scanner::from_source("{,}.");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
@@ -633,7 +635,7 @@ mod tests {
     #[test]
     fn scan_arithmetic_punctuation() {
         let s = Scanner::from_source("+-;*");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
@@ -651,7 +653,7 @@ mod tests {
     fn scan_chained_comparison_without_bang() {
         // `==<=>=` — no leading `!=`, so `rest_of_line` / peek behavior is easy to reason about.
         let s = Scanner::from_source("==<=>=");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
@@ -667,7 +669,7 @@ mod tests {
     #[test]
     fn scan_slash_not_comment_when_single() {
         let s = Scanner::from_source("1/2");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
@@ -718,7 +720,7 @@ mod tests {
     #[test]
     fn scan_numbers_separated_by_whitespace() {
         let s = Scanner::from_source("42  99.5 ;");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
@@ -734,7 +736,7 @@ mod tests {
     #[test]
     fn scan_whitespace_between_tokens_not_skipped_yet() {
         let s = Scanner::from_source("+ +");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
@@ -749,7 +751,7 @@ mod tests {
     #[test]
     fn scan_ignores_spaces_tabs_and_carriage_returns() {
         let s = Scanner::from_source(" \t \r\t  \r");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(s.token_lines(), vec![token_repr(TokenType::EOF, "")]);
     }
@@ -758,7 +760,7 @@ mod tests {
     fn scan_ignores_whitespace_across_lines() {
         // Includes tabs and Windows-style CRLF. `lines()` strips line terminators, but `\t` remains.
         let s = Scanner::from_source(" \t\r\n\t \n  \r\n");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(s.token_lines(), vec![token_repr(TokenType::EOF, "")]);
     }
@@ -766,7 +768,7 @@ mod tests {
     #[test]
     fn scan_string_literal_tokenizes_lexeme_and_literal() {
         let s = Scanner::from_source("\"hello\"");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
@@ -780,7 +782,7 @@ mod tests {
     #[test]
     fn scan_string_literal_allows_spaces_and_tabs_inside() {
         let s = Scanner::from_source("\"a b\tc\"");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 0);
         assert_eq!(
             s.token_lines(),
@@ -794,7 +796,7 @@ mod tests {
     #[test]
     fn scan_unterminated_string_line_no_closing_quote() {
         let s = Scanner::from_source("\"hello");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 65);
         assert_eq!(s.token_lines(), vec![token_repr(TokenType::EOF, "")]);
     }
@@ -802,7 +804,7 @@ mod tests {
     #[test]
     fn scan_unterminated_string_only_opening_quote() {
         let s = Scanner::from_source("\"");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 65);
         assert_eq!(s.token_lines(), vec![token_repr(TokenType::EOF, "")]);
     }
@@ -810,7 +812,7 @@ mod tests {
     #[test]
     fn scan_unterminated_string_after_valid_literal_and_semicolon() {
         let s = Scanner::from_source("\"baz\" ; \"unterminated");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 65);
         assert_eq!(
             s.token_lines(),
@@ -825,7 +827,7 @@ mod tests {
     #[test]
     fn scan_unterminated_string_after_another_string() {
         let s = Scanner::from_source("\"a\" \"b");
-        let (s, exit) = s.scan().unwrap();
+        let (s, exit) = s.scan(false).unwrap();
         assert_eq!(exit, 65);
         assert_eq!(
             s.token_lines(),
