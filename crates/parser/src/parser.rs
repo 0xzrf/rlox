@@ -346,4 +346,36 @@ mod tests {
         let msg = parse_err("true ==");
         assert!(msg.contains("Expected an expression"), "unexpected error message: {msg}");
     }
+
+    #[test]
+    fn parses_greater_equal() {
+        assert_eq!(parse_to_ast("2 >= 1"), "(>= 2.0 1.0)");
+    }
+
+    #[test]
+    fn parses_less_than() {
+        assert_eq!(parse_to_ast("2 < 10"), "(< 2.0 10.0)");
+    }
+
+    #[test]
+    fn parses_mixed_equality_chain() {
+        assert_eq!(
+            parse_to_ast("1 == 2 != 3"),
+            "(!= (== 1.0 2.0) 3.0)"
+        );
+    }
+
+    #[test]
+    fn parses_complex_grouping_and_precedence() {
+        assert_eq!(
+            parse_to_ast("(1 + 2) * (3 - 4 / 2)"),
+            "(* (group (+ 1.0 2.0)) (group (- 3.0 (/ 4.0 2.0))))"
+        );
+    }
+
+    #[test]
+    fn errors_on_leading_binary_operator() {
+        let msg = parse_err("+ 1");
+        assert!(msg.contains("Expected an expression"), "unexpected error message: {msg}");
+    }
 }
