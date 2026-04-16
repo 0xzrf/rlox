@@ -1,6 +1,6 @@
 #[cfg(test)]
 pub mod parser_tests {
-    use parser::Parser;
+    use parser::{AstPrinter, Parser};
     use scanner::Scanner;
 
     #[test]
@@ -14,6 +14,6 @@ pub mod parser_tests {
         println!("Parser result: {parser_result:#?}");
         assert!(parser_result.is_ok(), "expected parser to not fail here");
 
-        println!("{:#?}", parser_result.unwrap());
+        println!("{:#?}", AstPrinter::print(&parser_result.unwrap()));
     }
 }

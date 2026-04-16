@@ -89,23 +89,22 @@ impl<'a> Parser<'a> {
     }
 
     fn primary(&mut self) -> ParserResult<Expr> {
-        if self.check(&FALSE) {
+        if self.match_any(&[FALSE]) {
             return Ok(Expr::new_primary(Literal::False));
         }
-        if self.check(&TRUE) {
+        if self.match_any(&[TRUE]) {
             return Ok(Expr::new_primary(Literal::True));
         }
 
-        if self.check(&NUMBER) {
+        if self.match_any(&[NUMBER]) {
             return Ok(Expr::new_primary(Literal::Number(self.prev().literal.clone())));
         }
 
-        if self.check(&STRING) {
+        if self.match_any(&[STRING]) {
             return Ok(Expr::new_primary(Literal::String(self.prev().literal.clone())));
         }
 
-
-        if self.check(&LEFT_PAREN) {
+        if self.match_any(&[LEFT_PAREN]) {
             let expr = self.expression()?;
             self.consume(&TokenType::RIGHT_PAREN, "Expect ')' after expression")?;
             return Ok(Expr::new_grouping(expr));
@@ -163,13 +162,10 @@ impl<'a> Parser<'a> {
     }
 
     fn check(&mut self, is_token: &TokenType) -> bool {
-        if let Some((_, token)) = self.tokens_peekable.peek()
-            && is_token == &token.token_ty
-            && !self.is_at_end()
-        {
-            return true;
+        match self.peek() {
+            Some((_ix, token)) => token.token_ty == *is_token,
+            None => false,
         }
-        false
     }
 
     fn advance(&mut self) -> Option<(usize, &Token)> {
@@ -177,7 +173,7 @@ impl<'a> Parser<'a> {
     }
 
     fn is_at_end(&mut self) -> bool {
-        self.check(&EOF)
+        matches!(self.peek(), Some((_ix, token)) if token.token_ty == EOF)
     }
 
     fn peek(&mut self) -> Option<&(usize, &Token)> {
@@ -186,7 +182,15 @@ impl<'a> Parser<'a> {
 
 
     fn prev(&mut self) -> &Token {
-        let next = self.tokens_peekable.peek().unwrap().0;
-        &self.original_tokens[next - 1]
+        let next = self
+            .tokens_peekable
+            .peek()
+            .map(|(ix, _)| *ix)
+            .unwrap_or(self.original_tokens.len());
+
+        let prev_ix =
+            next.checked_sub(1).expect("Parser::prev() called before consuming any token");
+
+        &self.original_tokens[prev_ix]
     }
 }
