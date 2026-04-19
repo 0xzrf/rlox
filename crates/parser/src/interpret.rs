@@ -333,4 +333,19 @@ mod interpret_tests {
             err.message
         );
     }
+
+    #[test]
+    fn multiplication_binds_tighter_than_addition() {
+        assert_eq!(get_eval("1 + 2 * 3").unwrap(), Value::Number(7.0));
+    }
+
+    #[test]
+    fn comparison_errors_when_operands_are_not_both_numbers() {
+        let err = get_eval("3 < true").expect_err("number vs bool comparison should error");
+        assert!(
+            err.message.contains("Operands must be numbers"),
+            "unexpected message: {}",
+            err.message
+        );
+    }
 }
