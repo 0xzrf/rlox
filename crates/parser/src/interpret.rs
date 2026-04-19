@@ -245,10 +245,7 @@ mod interpret_tests {
     pub fn test_eval() {
         let source_code = "2 + 3";
 
-        let expr = get_parse_result(source_code).unwrap();
-
-        let eval = Interpret::eval(&expr);
-
+        let eval = get_eval(source_code);
         println!("eval: {eval:#?}");
 
         let Ok(Value::Number(val)) = eval else { panic!() };
@@ -259,13 +256,16 @@ mod interpret_tests {
     pub fn test_err_when_wrong_expr() {
         let source_code = "2 * (3 / -\"muffin\")";
 
-        let expr = get_parse_result(source_code).unwrap();
-
-        let eval = Interpret::eval(&expr);
+        let eval = get_eval(source_code);
 
         assert!(eval.is_err(), "expected this to fail");
     }
 
     #[test]
-    pub fn test_bool() {}
+    pub fn test_bool() {
+        let eval = get_eval("true");
+
+        assert!(eval.is_ok(), "Expected the evaluation to pass");
+        assert_eq!(eval.unwrap(), Value::Bool(true), "Unexpected eval value");
+    }
 }

@@ -14,3 +14,10 @@ interpreter-types = { path = "crates/types" }
 parser = { path = "crates/parser" }
 scanner = { path = "crates/scanner" }
 thiserror = "2.0.18"
+
+[workspace.metadata.scripts]
+test-cli = "cargo test -p cli"
+test-parser = "cargo test -p parser"
+test-scanner = "cargo test -p scanner"
+test-types = "cargo test -p types"
+test-all = "cargo test --all"
