@@ -360,4 +360,15 @@ mod interpret_tests {
         assert_eq!(get_eval("true == false == false").unwrap(), Value::Bool(true));
         assert_eq!(get_eval("1 == 2 != 3").unwrap(), Value::Bool(true));
     }
+
+    #[test]
+    fn evaluate_to_string_formats_like_lox_numbers() {
+        let expr = get_parse_result("42").expect("parse");
+        assert_eq!(Interpret::evaluate_to_string(&expr).unwrap(), "42");
+    }
+
+    #[test]
+    fn subtraction_chains_left_to_right() {
+        assert_eq!(get_eval("10 - 3 - 2").unwrap(), Value::Number(5.0));
+    }
 }
