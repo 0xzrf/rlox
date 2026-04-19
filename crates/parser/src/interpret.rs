@@ -434,4 +434,14 @@ mod interpret_tests {
             err.message
         );
     }
+
+    #[test]
+    fn chained_unary_minus_double_negates() {
+        assert_eq!(get_eval("--1").unwrap(), Value::Number(1.0));
+    }
+
+    #[test]
+    fn bang_on_string_uses_truthiness() {
+        assert_eq!(get_eval("!\"hi\"").unwrap(), Value::Bool(false));
+    }
 }
