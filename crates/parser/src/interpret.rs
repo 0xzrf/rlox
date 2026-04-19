@@ -318,4 +318,19 @@ mod interpret_tests {
             err.message
         );
     }
+
+    #[test]
+    fn division_chains_left_to_right() {
+        assert_eq!(get_eval("24 / 3 / 2").unwrap(), Value::Number(4.0));
+    }
+
+    #[test]
+    fn unary_minus_errors_on_non_number_operand() {
+        let err = get_eval("-true").expect_err("- on bool should error");
+        assert!(
+            err.message.contains("Operand must be a number"),
+            "unexpected message: {}",
+            err.message
+        );
+    }
 }
