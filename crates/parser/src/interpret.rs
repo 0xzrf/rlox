@@ -414,4 +414,24 @@ mod interpret_tests {
             Value::Number(3.0)
         );
     }
+
+    #[test]
+    fn minus_errors_when_operand_is_not_a_number() {
+        let err = get_eval("\"a\" - 1").expect_err("string - number should error");
+        assert!(
+            err.message.contains("Operands must be numbers"),
+            "unexpected message: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn chained_comparison_errors_when_result_is_not_comparable_as_number() {
+        let err = get_eval("3 > 2 > 1").expect_err("bool compared to number should error");
+        assert!(
+            err.message.contains("Operands must be numbers"),
+            "unexpected message: {}",
+            err.message
+        );
+    }
 }
