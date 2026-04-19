@@ -371,4 +371,14 @@ mod interpret_tests {
     fn subtraction_chains_left_to_right() {
         assert_eq!(get_eval("10 - 3 - 2").unwrap(), Value::Number(5.0));
     }
+
+    #[test]
+    fn addition_and_multiplication_mix_respects_precedence() {
+        assert_eq!(get_eval("1 + 2 * 3 + 4").unwrap(), Value::Number(11.0));
+    }
+
+    #[test]
+    fn unary_bang_binds_tighter_than_equality() {
+        assert_eq!(get_eval("!false == true").unwrap(), Value::Bool(true));
+    }
 }
