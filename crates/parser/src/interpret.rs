@@ -227,12 +227,18 @@ impl Interpret {
 mod interpret_tests {
     use scanner::Scanner;
 
-    use super::{Interpret, Value};
+    use super::{Interpret, RuntimeError, Value};
     use crate::{Expr, Parser, ParserResult};
     fn get_parse_result(source_code: &str) -> ParserResult<Expr> {
         let tokens = Scanner::_new(source_code.to_string()).scan(false).unwrap().0.get_tokens();
 
         Parser::new(&tokens).parse()
+    }
+
+    fn get_eval(source_code: &str) -> Result<Value, RuntimeError> {
+        Interpret::eval(
+            &get_parse_result(source_code).expect("Couldn't parse the value the value properly"),
+        )
     }
 
     #[test]
@@ -242,6 +248,8 @@ mod interpret_tests {
         let expr = get_parse_result(source_code).unwrap();
 
         let eval = Interpret::eval(&expr);
+
+        println!("eval: {eval:#?}");
 
         let Ok(Value::Number(val)) = eval else { panic!() };
         assert_eq!(val, 5.0);
@@ -257,4 +265,7 @@ mod interpret_tests {
 
         assert!(eval.is_err(), "expected this to fail");
     }
+
+    #[test]
+    pub fn test_bool() {}
 }
