@@ -381,4 +381,24 @@ mod interpret_tests {
     fn unary_bang_binds_tighter_than_equality() {
         assert_eq!(get_eval("!false == true").unwrap(), Value::Bool(true));
     }
+
+    #[test]
+    fn star_errors_when_operands_are_not_numbers() {
+        let err = get_eval("3 * true").expect_err("* with bool should error");
+        assert!(
+            err.message.contains("Operands must be numbers"),
+            "unexpected message: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn slash_errors_when_operands_are_not_numbers() {
+        let err = get_eval("\"x\" / 2").expect_err("string / number should error");
+        assert!(
+            err.message.contains("Operands must be numbers"),
+            "unexpected message: {}",
+            err.message
+        );
+    }
 }
