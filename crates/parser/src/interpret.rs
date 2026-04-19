@@ -348,4 +348,16 @@ mod interpret_tests {
             err.message
         );
     }
+
+    #[test]
+    fn equality_works_across_mixed_operand_types() {
+        assert_eq!(get_eval("1 == true").unwrap(), Value::Bool(false));
+        assert_eq!(get_eval("\"hi\" != 1").unwrap(), Value::Bool(true));
+    }
+
+    #[test]
+    fn chained_equality_is_left_associative() {
+        assert_eq!(get_eval("true == false == false").unwrap(), Value::Bool(true));
+        assert_eq!(get_eval("1 == 2 != 3").unwrap(), Value::Bool(true));
+    }
 }
