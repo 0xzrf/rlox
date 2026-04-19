@@ -401,4 +401,17 @@ mod interpret_tests {
             err.message
         );
     }
+
+    #[test]
+    fn nested_grouping_preserves_literal_value() {
+        assert_eq!(get_eval("((42))").unwrap(), Value::Number(42.0));
+    }
+
+    #[test]
+    fn grouped_subexpression_precedence_inside_factors() {
+        assert_eq!(
+            get_eval("(1 + 2) * (3 - 4 / 2)").unwrap(),
+            Value::Number(3.0)
+        );
+    }
 }
