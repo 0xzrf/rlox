@@ -444,4 +444,18 @@ mod interpret_tests {
     fn bang_on_string_uses_truthiness() {
         assert_eq!(get_eval("!\"hi\"").unwrap(), Value::Bool(false));
     }
+
+    #[test]
+    fn evaluate_to_string_formats_boolean_literals() {
+        let expr = get_parse_result("false").expect("parse");
+        assert_eq!(Interpret::evaluate_to_string(&expr).unwrap(), "false");
+    }
+
+    #[test]
+    fn string_inequality_compares_lexeme_payloads() {
+        assert_eq!(
+            get_eval("\"a\" != \"b\"").unwrap(),
+            Value::Bool(true)
+        );
+    }
 }
