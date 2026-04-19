@@ -268,4 +268,54 @@ mod interpret_tests {
         assert!(eval.is_ok(), "Expected the evaluation to pass");
         assert_eq!(eval.unwrap(), Value::Bool(true), "Unexpected eval value");
     }
+
+    #[test]
+    fn string_concatenation_with_plus() {
+        assert_eq!(
+            get_eval("\"hello\" + \" \" + \"world\"").unwrap(),
+            Value::String("hello world".to_string())
+        );
+    }
+
+    #[test]
+    fn unary_minus_negates_number() {
+        assert_eq!(get_eval("- (1 + 2)").unwrap(), Value::Number(-3.0));
+    }
+
+    #[test]
+    fn comparison_operators_produce_bool() {
+        assert_eq!(get_eval("3 < 4").unwrap(), Value::Bool(true));
+        assert_eq!(get_eval("5 <= 5").unwrap(), Value::Bool(true));
+        assert_eq!(get_eval("10 > 3").unwrap(), Value::Bool(true));
+    }
+
+    #[test]
+    fn equality_on_booleans_numbers_and_strings() {
+        assert_eq!(get_eval("true == false").unwrap(), Value::Bool(false));
+        assert_eq!(get_eval("\"a\" == \"a\"").unwrap(), Value::Bool(true));
+        assert_eq!(get_eval("1 == 2").unwrap(), Value::Bool(false));
+        assert_eq!(get_eval("1 != 2").unwrap(), Value::Bool(true));
+    }
+
+    #[test]
+    fn bang_truthiness_like_lox() {
+        assert_eq!(get_eval("!false").unwrap(), Value::Bool(true));
+        assert_eq!(get_eval("!true").unwrap(), Value::Bool(false));
+        assert_eq!(get_eval("!0").unwrap(), Value::Bool(false));
+    }
+
+    #[test]
+    fn grouping_changes_precedence() {
+        assert_eq!(get_eval("(1 + 2) * 3").unwrap(), Value::Number(9.0));
+    }
+
+    #[test]
+    fn plus_runtime_error_when_operand_types_mismatch() {
+        let err = get_eval("1 + \"a\"").expect_err("number + string should error");
+        assert!(
+            err.message.contains("Operands must be two numbers or two strings"),
+            "unexpected message: {}",
+            err.message
+        );
+    }
 }
