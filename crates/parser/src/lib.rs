@@ -11,3 +11,6 @@ pub use interpret::Interpret;
 
 mod statements;
 mod states;
+
+mod env;
+use env::*;
