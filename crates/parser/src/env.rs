@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::interpret::Value;
+use crate::interpret::{RuntimeError, Value};
 
 pub struct Env {
     values: HashMap<String, Option<Value>>,

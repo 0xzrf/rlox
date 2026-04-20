@@ -52,7 +52,7 @@ impl<'a> Parser<'a> {
 
         self.consume(&SEMICOLON, "Expected a semicolon after stmt")?;
 
-        Ok(Stmt::Var { name, initilizer })
+        Ok(Stmt::Var { name, initializer })
     }
 
     fn statement(&mut self) -> ParserResult<Stmt> {

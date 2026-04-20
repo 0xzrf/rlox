@@ -52,9 +52,9 @@ pub struct Interpret {
 }
 
 impl Interpret {
-    pub fn interpret_stmts(stmts: &[Stmt]) {
+    pub fn interpret_stmts(&mut self, stmts: &[Stmt]) {
         for stmt in stmts {
-            stmt.eval();
+            stmt.eval(&mut self.env);
         }
     }
 
