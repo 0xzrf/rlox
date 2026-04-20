@@ -4,7 +4,7 @@ use std::slice::Iter;
 use interpreter_types::Token;
 use interpreter_types::TokenType::{self, *};
 
-use crate::ast::{Expr, Literal};
+use crate::ast::{Expr, Literal, Stmt};
 use crate::parser_errors::{ParserError, ParserResult};
 
 pub struct Parser<'a> {
@@ -23,8 +23,39 @@ impl<'a> Parser<'a> {
     }
 
     /// The top level interface to create the syntax tree
-    pub fn parse(&mut self) -> ParserResult<Expr> {
-        self.expression()
+    pub fn parse(&mut self) -> ParserResult<Vec<Stmt>> {
+        let mut stmts = Vec::new();
+
+        while !self.is_at_end() {
+            stmts.push(self.statement()?);
+        }
+
+        Ok(stmts)
+    }
+
+    fn statement(&mut self) -> ParserResult<Stmt> {
+        if self.match_any(&[PRINT]) {
+            return self.print_statment();
+        }
+
+        self.expression_stmt()
+    }
+
+    fn print_statment(&mut self) -> ParserResult<Stmt> {
+        let value = self.expression()?;
+
+        self.consume(&SEMICOLON, "Expected the statement to end with a semicolon")?;
+
+        Ok(Stmt::Print { expr: value })
+    }
+
+    fn expression_stmt(&mut self) -> ParserResult<Stmt> {
+        let value = self.expression()?;
+
+
+        self.consume(&SEMICOLON, "Expected the statement to end with a semicolon")?;
+
+        Ok(Stmt::Expression { expr: value })
     }
 
     fn expression(&mut self) -> ParserResult<Expr> {
@@ -200,16 +231,31 @@ mod tests {
     use scanner::Scanner;
 
     use super::Parser;
-    use crate::AstPrinter;
+    use crate::{AstPrinter, Stmt};
 
     fn parse_to_ast(source: &str) -> String {
-        let tokens = Scanner::_new(source.to_string()).scan(false).unwrap().0.get_tokens();
-        let expr = Parser::new(&tokens).parse().unwrap();
-        AstPrinter::print(&expr)
+        let mut src = source.trim().to_string();
+        if !src.ends_with(';') {
+            src.push(';');
+        }
+
+        let tokens = Scanner::_new(src).scan(false).unwrap().0.get_tokens();
+        let mut stmts = Parser::new(&tokens).parse().unwrap();
+        assert_eq!(stmts.len(), 1, "expected a single statement");
+
+        match stmts.remove(0) {
+            Stmt::Expression { expr } => AstPrinter::print(&expr),
+            Stmt::Print { expr } => AstPrinter::print(&expr),
+        }
     }
 
     fn parse_err(source: &str) -> String {
-        let tokens = Scanner::_new(source.to_string()).scan(false).unwrap().0.get_tokens();
+        let mut src = source.trim().to_string();
+        if !src.is_empty() && !src.ends_with(';') {
+            src.push(';');
+        }
+
+        let tokens = Scanner::_new(src).scan(false).unwrap().0.get_tokens();
         let err = Parser::new(&tokens).parse().unwrap_err();
         err.to_string()
     }
