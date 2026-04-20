@@ -27,7 +27,7 @@ impl<'a> Parser<'a> {
         let mut stmts = Vec::new();
 
         while !self.is_at_end() {
-            stmts.push(self.statement()?);
+            stmts.push(self.declaration()?);
         }
 
         Ok(stmts)
@@ -60,14 +60,16 @@ impl<'a> Parser<'a> {
             return self.print_statment();
         }
 
-        if self.match_any(&[LEFT_BRACE]) {}
+        if self.match_any(&[LEFT_BRACE]) {
+            return self.block();
+        }
 
         self.expression_stmt()
     }
 
     fn block(&mut self) -> ParserResult<Stmt> {
         let mut stmts = Vec::new();
-        while self.check(&RIGHT_BRACE) && !self.is_at_end() {
+        while !self.check(&RIGHT_BRACE) && !self.is_at_end() {
             stmts.push(self.declaration()?);
         }
 
@@ -101,11 +103,11 @@ impl<'a> Parser<'a> {
         let expr = self.equality()?;
 
         if self.match_any(&[EQUAL]) {
-            let equal = self.prev();
+            let _equal = self.prev();
             let value = self.assignment()?;
 
             if let Expr::Variable { name } = expr {
-                return Ok(Expr::Assign { name, value });
+                return Ok(Expr::Assign { name, value: Box::new(value) });
             }
             return Err(ParserError::ParseError {
                 msg: "Invalid assignment target".to_string(),
@@ -189,7 +191,7 @@ impl<'a> Parser<'a> {
         }
 
         if self.match_any(&[IDENTIFIER]) {
-            return Ok(Expr::new_variable(*self.prev()));
+            return Ok(Expr::new_variable(self.prev().clone()));
         }
 
         if self.match_any(&[LEFT_PAREN]) {
@@ -303,6 +305,7 @@ mod tests {
         match stmts.remove(0) {
             Stmt::Expression { expr } => AstPrinter::print(&expr),
             Stmt::Print { expr } => AstPrinter::print(&expr),
+            _ => panic!("test helper expects expression/print statement"),
         }
     }
 

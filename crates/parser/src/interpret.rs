@@ -1,9 +1,11 @@
 use std::fmt;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use interpreter_types::{Token, TokenType};
 
 use crate::ast::{Expr, Literal, Stmt};
-use crate::env::Env;
+use crate::env::{Env, EnvRef};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -48,14 +50,21 @@ pub type InterpretResult<T> = Result<T, RuntimeError>;
 
 /// Tree-walk interpreter for expression ASTs.
 pub struct Interpret {
-    env: Env,
+    env: EnvRef,
 }
 
 impl Interpret {
-    pub fn interpret_stmts(&mut self, stmts: &[Stmt]) {
-        for stmt in stmts {
-            stmt.eval(&mut self.env);
+    pub fn new() -> Self {
+        Self {
+            env: Rc::new(RefCell::new(Env::new(None))),
         }
+    }
+
+    pub fn interpret_stmts(&mut self, stmts: &[Stmt]) -> InterpretResult<()> {
+        for stmt in stmts {
+            stmt.eval(self)?;
+        }
+        Ok(())
     }
 
     /// Evaluate an expression and return its runtime value.
@@ -93,13 +102,17 @@ impl Interpret {
                 }
             }
 
-            Variable { name } => {
-                todo!()
-            }
+            Variable { name } => self.get_variable(name),
 
             Assign { name, value } => {
                 let eval = self.eval(value)?;
-                self.env.assign(name.lexeme.clone(), eval.clone())?;
+                self.env
+                    .borrow_mut()
+                    .assign(name.lexeme.clone(), eval.clone())
+                    .map_err(|msg| RuntimeError {
+                        token: name.clone(),
+                        message: msg,
+                    })?;
                 return Ok(eval);
             }
 
@@ -238,6 +251,43 @@ impl Interpret {
                 message: "Operands must be numbers.".to_string(),
             })
         }
+    }
+}
+
+impl Interpret {
+    fn get_variable(&mut self, name: &Token) -> InterpretResult<Value> {
+        let Some(val) = self.env.borrow().get_owned(&name.lexeme) else {
+            return Err(RuntimeError {
+                token: name.clone(),
+                message: format!("Undefined variable '{}'.", name.lexeme),
+            });
+        };
+        Ok(val)
+    }
+
+    pub(crate) fn env_define(&mut self, name: String, value: Option<Value>) {
+        self.env.borrow_mut().define(name, value);
+    }
+
+    pub(crate) fn execute_block(&mut self, stmts: &[Stmt]) -> InterpretResult<()> {
+        let previous = self.env.clone();
+        self.env = Rc::new(RefCell::new(Env::new(Some(previous.clone()))));
+
+        let result = (|| {
+            for stmt in stmts {
+                stmt.eval(self)?;
+            }
+            Ok(())
+        })();
+
+        self.env = previous;
+        result
+    }
+
+    pub(crate) fn with_env(&mut self, env: EnvRef) -> EnvRef {
+        let prev = self.env.clone();
+        self.env = env;
+        prev
     }
 }
 

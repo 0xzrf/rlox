@@ -33,7 +33,7 @@ pub enum Expr {
     },
     Assign {
         name: Token,
-        value: Expr,
+        value: Box<Expr>,
     },
 }
 
@@ -100,6 +100,8 @@ impl Expr {
                 format!("{value}")
             }
             Expr::Unary { operator, right } => parenthesize(&operator.lexeme, &[right]),
+            Expr::Variable { name } => name.lexeme.clone(),
+            Expr::Assign { name, value } => parenthesize(&format!("= {}", name.lexeme), &[value]),
         }
     }
 }

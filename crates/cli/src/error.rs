@@ -15,4 +15,7 @@ pub enum CliErrors {
 
     #[error("Parser Error: {}", reason)]
     ParserError { reason: String },
+
+    #[error("Runtime Error: {}", reason)]
+    RuntimeError { reason: String },
 }

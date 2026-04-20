@@ -9,34 +9,39 @@
 use interpreter_types::Token;
 
 use super::Expr;
-use crate::Interpret;
-use crate::env::Env;
-use crate::interpret::RuntimeError;
+use crate::interpret::{Interpret, RuntimeError};
 
 #[derive(Debug)]
 pub enum Stmt {
-    ExpressionStmt { expr: Expr },
+    Expression { expr: Expr },
     Print { expr: Expr },
     Var { name: Token, initializer: Option<Expr> },
     Block { stmts: Vec<Stmt> },
 }
 
 impl Stmt {
-    pub fn eval(&self, env: &mut Env) -> Result<(), RuntimeError> {
+    pub fn eval(&self, interpreter: &mut Interpret) -> Result<(), RuntimeError> {
         match self {
-            Stmt::ExpressionStmt { expr } => Ok(()),
+            Stmt::Expression { expr } => {
+                interpreter.evaluate(expr)?;
+                Ok(())
+            }
             Stmt::Print { expr } => {
-                let value = Interpret::evaluate(expr).unwrap();
+                let value = interpreter.evaluate(expr)?;
                 println!("{value}");
                 Ok(())
             }
             Stmt::Var { name, initializer } => {
                 let mut value = None;
                 if let Some(expr) = initializer {
-                    value = Some(Interpret::evaluate(expr)?);
+                    value = Some(interpreter.evaluate(expr)?);
                 }
 
-                env.define(name.lexeme, value);
+                interpreter.env_define(name.lexeme.clone(), value);
+                Ok(())
+            }
+            Stmt::Block { stmts } => {
+                interpreter.execute_block(stmts)?;
                 Ok(())
             }
         }

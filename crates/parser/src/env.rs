@@ -1,24 +1,32 @@
 use std::collections::HashMap;
+use std::cell::RefCell;
+use std::rc::Rc;
 
-use crate::interpret::{RuntimeError, Value};
+use crate::interpret::Value;
+
+pub type EnvRef = Rc<RefCell<Env>>;
 
 pub struct Env {
     values: HashMap<String, Value>,
-    enclosing: Option<Env>,
+    enclosing: Option<EnvRef>,
 }
 
 
 impl Env {
-    pub fn new(enclosing: Option<Env>) -> Self {
-        Self { values: HashMap::new(), enclosing }
+    pub fn new(enclosing: Option<EnvRef>) -> Self {
+        Self {
+            values: HashMap::new(),
+            enclosing,
+        }
     }
 
-    pub fn get_var(&self, name: &str) -> Option<&Value> {
-        match (self.values.get(name), self.enclosing) {
-            (Some(val), _) => return Some(val),
-            (None, Some(enclosing)) => return enclosing.get_var(name),
-            _ => None,
+    pub fn get_owned(&self, name: &str) -> Option<Value> {
+        if let Some(val) = self.values.get(name) {
+            return Some(val.clone());
         }
+        self.enclosing
+            .as_ref()
+            .and_then(|e| e.borrow().get_owned(name))
     }
 
     pub fn define(&mut self, name: String, value: Option<Value>) {
@@ -29,27 +37,17 @@ impl Env {
         }
     }
 
-    pub fn assign(&mut self, name: String, value: Value) -> Result<(), RuntimeError> {
-        match (self.values.insert(name, value), self.enclosing) {
-            (Some(val), _) => {
-                if self.values.insert(name, value).is_none() {
-                    return Err(RuntimeError {
-                        token: Default::default(),
-                        message: format!("Undefined variable '{}'.", name),
-                    });
-                }
-            }
-            (None, Some(mut enclosing)) => {
-                enclosing.assign(name, value)?;
-            }
-            _ => {
-                return Err(RuntimeError {
-                    token: Default::default(),
-                    message: format!("Undefined variable '{}'.", name),
-                });
-            }
+    pub fn assign(&mut self, name: String, value: Value) -> Result<(), String> {
+        if self.values.contains_key(&name) {
+            self.values.insert(name, value);
+            return Ok(());
         }
 
-        Ok(())
+        if let Some(enclosing) = &self.enclosing {
+            return enclosing.borrow_mut().assign(name, value);
+        }
+
+        Err(format!("Undefined variable '{}'.", name))
+
     }
 }

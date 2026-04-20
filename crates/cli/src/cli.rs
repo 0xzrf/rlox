@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use parser::{AstPrinter, Interpret, Parser as InterpreterParser};
+use parser::{Interpret, Parser as InterpreterParser};
 use scanner::Scanner;
 
 use crate::InterpreterErrors;
@@ -39,7 +39,10 @@ impl Commands {
 
                         match InterpreterParser::new(&tokens).parse() {
                             Ok(stmts) => {
-                                Interpret::interpret_stmts(&stmts);
+                                let mut interpreter = Interpret::new();
+                                interpreter
+                                    .interpret_stmts(&stmts)
+                                    .map_err(|e| CliErrors::RuntimeError { reason: e.to_string() })?;
 
                                 Ok(0)
                             }

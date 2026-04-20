@@ -22,7 +22,7 @@ pub mod parser_tests {
 
         match stmts.remove(0) {
             Stmt::Expression { expr } => Some(expr),
-            Stmt::Print { .. } => None,
+            Stmt::Print { .. } | Stmt::Var { .. } | Stmt::Block { .. } => None,
         }
     }
 
@@ -53,6 +53,8 @@ pub mod parser_tests {
             .map(|stmt| match stmt {
                 Stmt::Expression { expr } => AstPrinter::print(expr),
                 Stmt::Print { expr } => format!("(print {})", AstPrinter::print(expr)),
+                Stmt::Var { .. } => "(var ...)".to_string(),
+                Stmt::Block { .. } => "(block ...)".to_string(),
             })
             .collect::<Vec<_>>();
 
