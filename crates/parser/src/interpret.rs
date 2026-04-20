@@ -409,10 +409,7 @@ mod interpret_tests {
 
     #[test]
     fn grouped_subexpression_precedence_inside_factors() {
-        assert_eq!(
-            get_eval("(1 + 2) * (3 - 4 / 2)").unwrap(),
-            Value::Number(3.0)
-        );
+        assert_eq!(get_eval("(1 + 2) * (3 - 4 / 2)").unwrap(), Value::Number(3.0));
     }
 
     #[test]
@@ -453,9 +450,6 @@ mod interpret_tests {
 
     #[test]
     fn string_inequality_compares_lexeme_payloads() {
-        assert_eq!(
-            get_eval("\"a\" != \"b\"").unwrap(),
-            Value::Bool(true)
-        );
+        assert_eq!(get_eval("\"a\" != \"b\"").unwrap(), Value::Bool(true));
     }
 }
