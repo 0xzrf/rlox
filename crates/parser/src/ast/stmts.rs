@@ -18,6 +18,7 @@ pub enum Stmt {
     ExpressionStmt { expr: Expr },
     Print { expr: Expr },
     Var { name: Token, initializer: Option<Expr> },
+    Block { stmts: Vec<Stmt> },
 }
 
 impl Stmt {

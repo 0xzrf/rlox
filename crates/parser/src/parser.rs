@@ -60,7 +60,20 @@ impl<'a> Parser<'a> {
             return self.print_statment();
         }
 
+        if self.match_any(&[LEFT_BRACE]) {}
+
         self.expression_stmt()
+    }
+
+    fn block(&mut self) -> ParserResult<Stmt> {
+        let mut stmts = Vec::new();
+        while self.check(&RIGHT_BRACE) && !self.is_at_end() {
+            stmts.push(self.declaration()?);
+        }
+
+        self.consume(&RIGHT_BRACE, "Invalid block. Consider adding a }")?;
+
+        Ok(Stmt::Block { stmts })
     }
 
     fn print_statment(&mut self) -> ParserResult<Stmt> {

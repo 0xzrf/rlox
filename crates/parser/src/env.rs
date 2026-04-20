@@ -34,7 +34,7 @@ impl Env {
             (Some(val), _) => {
                 if self.values.insert(name, value).is_none() {
                     return Err(RuntimeError {
-                        token: Default::default(), // You may want to pass in a Token for better error reporting
+                        token: Default::default(),
                         message: format!("Undefined variable '{}'.", name),
                     });
                 }
@@ -44,7 +44,7 @@ impl Env {
             }
             _ => {
                 return Err(RuntimeError {
-                    token: Default::default(), // You may want to pass in a Token for better error reporting
+                    token: Default::default(),
                     message: format!("Undefined variable '{}'.", name),
                 });
             }
