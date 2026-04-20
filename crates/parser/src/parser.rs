@@ -81,7 +81,7 @@ impl<'a> Parser<'a> {
     }
 
     fn expression(&mut self) -> ParserResult<Expr> {
-        self.equality()
+        self.assignment()
     }
 
     fn assignment(&mut self) -> ParserResult<Expr> {
