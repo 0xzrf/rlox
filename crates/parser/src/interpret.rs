@@ -3,6 +3,7 @@ use std::fmt;
 use interpreter_types::{Token, TokenType};
 
 use crate::ast::{Expr, Literal, Stmt};
+use crate::env::Env;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -46,7 +47,9 @@ impl std::error::Error for RuntimeError {}
 pub type InterpretResult<T> = Result<T, RuntimeError>;
 
 /// Tree-walk interpreter for expression ASTs.
-pub struct Interpret;
+pub struct Interpret {
+    env: Env,
+}
 
 impl Interpret {
     pub fn interpret_stmts(stmts: &[Stmt]) {
@@ -88,6 +91,10 @@ impl Interpret {
                     TokenType::BANG => Ok(Value::Bool(!Self::is_truthy(&right_val))),
                     _ => Ok(right_val),
                 }
+            }
+
+            Variable { name } => {
+                todo!()
             }
 
             Binary { left, operator, right } => {

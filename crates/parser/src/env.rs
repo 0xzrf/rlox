@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
+use crate::interpret::Value;
+
 pub struct Env {
-    values: HashMap<String, Option<String>>,
+    values: HashMap<String, Option<Value>>,
 }
 
 
@@ -10,11 +12,11 @@ impl Env {
         Self { values: HashMap::new() }
     }
 
-    pub fn get_var(&self, name: &str) -> Option<&Option<String>> {
+    pub fn get_var(&self, name: &str) -> Option<&Option<Value>> {
         self.values.get(name)
     }
 
-    pub fn store_var(&mut self, name: String, value: Option<String>) {
+    pub fn define(&mut self, name: String, value: Option<Value>) {
         self.values.insert(name, value);
     }
 }
