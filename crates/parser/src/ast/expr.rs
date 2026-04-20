@@ -31,6 +31,10 @@ pub enum Expr {
     Variable {
         name: Token,
     },
+    Assign {
+        name: Token,
+        value: Expr,
+    },
 }
 
 #[derive(Debug, PartialEq)]

@@ -84,6 +84,24 @@ impl<'a> Parser<'a> {
         self.equality()
     }
 
+    fn assignment(&mut self) -> ParserResult<Expr> {
+        let expr = self.equality()?;
+
+        if self.match_any(&[EQUAL]) {
+            let equal = self.prev();
+            let value = self.assignment()?;
+
+            if let Expr::Variable { name } = expr {
+                return Ok(Expr::Assign { name, value });
+            }
+            return Err(ParserError::ParseError {
+                msg: "Invalid assignment target".to_string(),
+            });
+        }
+
+        Ok(expr)
+    }
+
     fn equality(&mut self) -> ParserResult<Expr> {
         let mut expr = self.comparision()?;
 
