@@ -78,6 +78,10 @@ impl Expr {
         Expr::Grouping { expression: Box::new(expr) }
     }
 
+    pub fn new_variable(name: Token) -> Self {
+        Expr::Variable { name }
+    }
+
     pub fn get_stringified_expr(&self) -> String {
         let parenthesize = AstPrinter::parenthesize;
         match self {

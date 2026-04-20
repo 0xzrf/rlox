@@ -50,6 +50,8 @@ impl<'a> Parser<'a> {
             initializer = Some(self.expression()?);
         }
 
+        self.consume(&SEMICOLON, "Expected a semicolon after stmt")?;
+
         Ok(Stmt::Var { name, initilizer })
     }
 
@@ -153,6 +155,10 @@ impl<'a> Parser<'a> {
 
         if self.match_any(&[STRING]) {
             return Ok(Expr::new_primary(Literal::String(self.prev().literal.clone())));
+        }
+
+        if self.match_any(&[IDENTIFIER]) {
+            return Ok(Expr::new_variable(*self.prev()));
         }
 
         if self.match_any(&[LEFT_PAREN]) {
