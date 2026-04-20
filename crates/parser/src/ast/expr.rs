@@ -28,6 +28,9 @@ pub enum Expr {
         operator: Token,
         right: Box<Expr>,
     },
+    Variable {
+        name: Token,
+    },
 }
 
 #[derive(Debug, PartialEq)]

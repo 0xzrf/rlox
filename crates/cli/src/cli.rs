@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use parser::{AstPrinter, Parser as InterpreterParser};
+use parser::{AstPrinter, Interpret, Parser as InterpreterParser};
 use scanner::Scanner;
 
 use crate::InterpreterErrors;
@@ -38,8 +38,9 @@ impl Commands {
                         let tokens = scanner.get_tokens();
 
                         match InterpreterParser::new(&tokens).parse() {
-                            Ok(expr) => {
-                                println!("{}", AstPrinter::print(&expr));
+                            Ok(stmts) => {
+                                Interpret::interpret_stmts(&stmts);
+
                                 Ok(0)
                             }
                             Err(e) => Err(CliErrors::ParserError { reason: e.to_string() }),

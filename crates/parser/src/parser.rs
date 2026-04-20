@@ -33,6 +33,26 @@ impl<'a> Parser<'a> {
         Ok(stmts)
     }
 
+    fn declaration(&mut self) -> ParserResult<Stmt> {
+        if self.match_any(&[VAR]) {
+            return self.var_declaration();
+        }
+
+        self.statement()
+    }
+
+    fn var_declaration(&mut self) -> ParserResult<Stmt> {
+        let name = self.consume(&IDENTIFIER, "Expected an Identifier after var declaration")?;
+
+        let mut initializer = None;
+
+        if self.match_any(&[EQUAL]) {
+            initializer = Some(self.expression()?);
+        }
+
+        Ok(Stmt::Var { name, initilizer })
+    }
+
     fn statement(&mut self) -> ParserResult<Stmt> {
         if self.match_any(&[PRINT]) {
             return self.print_statment();
@@ -308,8 +328,12 @@ mod tests {
 
     #[test]
     fn errors_on_empty_input() {
-        let msg = parse_err("");
-        assert!(msg.contains("Expected an expression"), "unexpected error message: {msg}");
+        let tokens = Scanner::_new("".to_string()).scan(false).unwrap().0.get_tokens();
+        let stmts = Parser::new(&tokens).parse().unwrap();
+        assert!(
+            stmts.is_empty(),
+            "empty input should parse as an empty program, got: {stmts:#?}"
+        );
     }
 
     #[test]

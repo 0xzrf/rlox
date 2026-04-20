@@ -49,6 +49,12 @@ pub type InterpretResult<T> = Result<T, RuntimeError>;
 pub struct Interpret;
 
 impl Interpret {
+    pub fn interpret_stmts(stmts: &[Stmt]) {
+        for stmt in stmts {
+            stmt.eval();
+        }
+    }
+
     /// Evaluate an expression and return its runtime value.
     pub fn evaluate(expr: &Expr) -> InterpretResult<Value> {
         Self::eval(expr)
@@ -223,233 +229,247 @@ impl Interpret {
 }
 
 
-// #[cfg(test)]
-// mod interpret_tests {
-//     use scanner::Scanner;
+#[cfg(test)]
+mod interpret_tests {
+    use scanner::Scanner;
 
-//     use super::{Interpret, RuntimeError, Value};
-//     use crate::{Expr, Parser, ParserResult};
-//     fn get_parse_result(source_code: &str) -> ParserResult<Expr> {
-//         let tokens = Scanner::_new(source_code.to_string()).scan(false).unwrap().0.get_tokens();
+    use super::{Interpret, RuntimeError, Value};
+    use crate::{Expr, Parser, ParserResult, Stmt};
 
-//         Parser::new(&tokens).parse()
-//     }
+    fn get_parse_result(source_code: &str) -> ParserResult<Expr> {
+        let mut src = source_code.trim().to_string();
+        if !src.ends_with(';') {
+            src.push(';');
+        }
 
-//     fn get_eval(source_code: &str) -> Result<Value, RuntimeError> {
-//         Interpret::eval(
-//             &get_parse_result(source_code).expect("Couldn't parse the value the value properly"),
-//         )
-//     }
+        let tokens = Scanner::_new(src).scan(false).unwrap().0.get_tokens();
+        let mut stmts = Parser::new(&tokens).parse()?;
 
-//     #[test]
-//     pub fn test_eval() {
-//         let source_code = "2 + 3";
+        assert_eq!(stmts.len(), 1, "interpret tests expect a single expression statement");
 
-//         let eval = get_eval(source_code);
-//         println!("eval: {eval:#?}");
+        match stmts.remove(0) {
+            Stmt::Expression { expr } => Ok(expr),
+            Stmt::Print { .. } => {
+                panic!("interpret tests expect an expression statement, got print")
+            }
+        }
+    }
 
-//         let Ok(Value::Number(val)) = eval else { panic!() };
-//         assert_eq!(val, 5.0);
-//     }
+    fn get_eval(source_code: &str) -> Result<Value, RuntimeError> {
+        Interpret::eval(
+            &get_parse_result(source_code).expect("Couldn't parse the value the value properly"),
+        )
+    }
 
-//     #[test]
-//     pub fn test_err_when_wrong_expr() {
-//         let source_code = "2 * (3 / -\"muffin\")";
+    #[test]
+    pub fn test_eval() {
+        let source_code = "2 + 3";
 
-//         let eval = get_eval(source_code);
+        let eval = get_eval(source_code);
+        println!("eval: {eval:#?}");
 
-//         assert!(eval.is_err(), "expected this to fail");
-//     }
+        let Ok(Value::Number(val)) = eval else { panic!() };
+        assert_eq!(val, 5.0);
+    }
 
-//     #[test]
-//     pub fn test_bool() {
-//         let eval = get_eval("true");
+    #[test]
+    pub fn test_err_when_wrong_expr() {
+        let source_code = "2 * (3 / -\"muffin\")";
 
-//         assert!(eval.is_ok(), "Expected the evaluation to pass");
-//         assert_eq!(eval.unwrap(), Value::Bool(true), "Unexpected eval value");
-//     }
+        let eval = get_eval(source_code);
 
-//     #[test]
-//     fn string_concatenation_with_plus() {
-//         assert_eq!(
-//             get_eval("\"hello\" + \" \" + \"world\"").unwrap(),
-//             Value::String("hello world".to_string())
-//         );
-//     }
+        assert!(eval.is_err(), "expected this to fail");
+    }
 
-//     #[test]
-//     fn unary_minus_negates_number() {
-//         assert_eq!(get_eval("- (1 + 2)").unwrap(), Value::Number(-3.0));
-//     }
+    #[test]
+    pub fn test_bool() {
+        let eval = get_eval("true");
 
-//     #[test]
-//     fn comparison_operators_produce_bool() {
-//         assert_eq!(get_eval("3 < 4").unwrap(), Value::Bool(true));
-//         assert_eq!(get_eval("5 <= 5").unwrap(), Value::Bool(true));
-//         assert_eq!(get_eval("10 > 3").unwrap(), Value::Bool(true));
-//     }
+        assert!(eval.is_ok(), "Expected the evaluation to pass");
+        assert_eq!(eval.unwrap(), Value::Bool(true), "Unexpected eval value");
+    }
 
-//     #[test]
-//     fn equality_on_booleans_numbers_and_strings() {
-//         assert_eq!(get_eval("true == false").unwrap(), Value::Bool(false));
-//         assert_eq!(get_eval("\"a\" == \"a\"").unwrap(), Value::Bool(true));
-//         assert_eq!(get_eval("1 == 2").unwrap(), Value::Bool(false));
-//         assert_eq!(get_eval("1 != 2").unwrap(), Value::Bool(true));
-//     }
+    #[test]
+    fn string_concatenation_with_plus() {
+        assert_eq!(
+            get_eval("\"hello\" + \" \" + \"world\"").unwrap(),
+            Value::String("hello world".to_string())
+        );
+    }
 
-//     #[test]
-//     fn bang_truthiness_like_lox() {
-//         assert_eq!(get_eval("!false").unwrap(), Value::Bool(true));
-//         assert_eq!(get_eval("!true").unwrap(), Value::Bool(false));
-//         assert_eq!(get_eval("!0").unwrap(), Value::Bool(false));
-//     }
+    #[test]
+    fn unary_minus_negates_number() {
+        assert_eq!(get_eval("- (1 + 2)").unwrap(), Value::Number(-3.0));
+    }
 
-//     #[test]
-//     fn grouping_changes_precedence() {
-//         assert_eq!(get_eval("(1 + 2) * 3").unwrap(), Value::Number(9.0));
-//     }
+    #[test]
+    fn comparison_operators_produce_bool() {
+        assert_eq!(get_eval("3 < 4").unwrap(), Value::Bool(true));
+        assert_eq!(get_eval("5 <= 5").unwrap(), Value::Bool(true));
+        assert_eq!(get_eval("10 > 3").unwrap(), Value::Bool(true));
+    }
 
-//     #[test]
-//     fn plus_runtime_error_when_operand_types_mismatch() {
-//         let err = get_eval("1 + \"a\"").expect_err("number + string should error");
-//         assert!(
-//             err.message.contains("Operands must be two numbers or two strings"),
-//             "unexpected message: {}",
-//             err.message
-//         );
-//     }
+    #[test]
+    fn equality_on_booleans_numbers_and_strings() {
+        assert_eq!(get_eval("true == false").unwrap(), Value::Bool(false));
+        assert_eq!(get_eval("\"a\" == \"a\"").unwrap(), Value::Bool(true));
+        assert_eq!(get_eval("1 == 2").unwrap(), Value::Bool(false));
+        assert_eq!(get_eval("1 != 2").unwrap(), Value::Bool(true));
+    }
 
-//     #[test]
-//     fn division_chains_left_to_right() {
-//         assert_eq!(get_eval("24 / 3 / 2").unwrap(), Value::Number(4.0));
-//     }
+    #[test]
+    fn bang_truthiness_like_lox() {
+        assert_eq!(get_eval("!false").unwrap(), Value::Bool(true));
+        assert_eq!(get_eval("!true").unwrap(), Value::Bool(false));
+        assert_eq!(get_eval("!0").unwrap(), Value::Bool(false));
+    }
 
-//     #[test]
-//     fn unary_minus_errors_on_non_number_operand() {
-//         let err = get_eval("-true").expect_err("- on bool should error");
-//         assert!(
-//             err.message.contains("Operand must be a number"),
-//             "unexpected message: {}",
-//             err.message
-//         );
-//     }
+    #[test]
+    fn grouping_changes_precedence() {
+        assert_eq!(get_eval("(1 + 2) * 3").unwrap(), Value::Number(9.0));
+    }
 
-//     #[test]
-//     fn multiplication_binds_tighter_than_addition() {
-//         assert_eq!(get_eval("1 + 2 * 3").unwrap(), Value::Number(7.0));
-//     }
+    #[test]
+    fn plus_runtime_error_when_operand_types_mismatch() {
+        let err = get_eval("1 + \"a\"").expect_err("number + string should error");
+        assert!(
+            err.message.contains("Operands must be two numbers or two strings"),
+            "unexpected message: {}",
+            err.message
+        );
+    }
 
-//     #[test]
-//     fn comparison_errors_when_operands_are_not_both_numbers() {
-//         let err = get_eval("3 < true").expect_err("number vs bool comparison should error");
-//         assert!(
-//             err.message.contains("Operands must be numbers"),
-//             "unexpected message: {}",
-//             err.message
-//         );
-//     }
+    #[test]
+    fn division_chains_left_to_right() {
+        assert_eq!(get_eval("24 / 3 / 2").unwrap(), Value::Number(4.0));
+    }
 
-//     #[test]
-//     fn equality_works_across_mixed_operand_types() {
-//         assert_eq!(get_eval("1 == true").unwrap(), Value::Bool(false));
-//         assert_eq!(get_eval("\"hi\" != 1").unwrap(), Value::Bool(true));
-//     }
+    #[test]
+    fn unary_minus_errors_on_non_number_operand() {
+        let err = get_eval("-true").expect_err("- on bool should error");
+        assert!(
+            err.message.contains("Operand must be a number"),
+            "unexpected message: {}",
+            err.message
+        );
+    }
 
-//     #[test]
-//     fn chained_equality_is_left_associative() {
-//         assert_eq!(get_eval("true == false == false").unwrap(), Value::Bool(true));
-//         assert_eq!(get_eval("1 == 2 != 3").unwrap(), Value::Bool(true));
-//     }
+    #[test]
+    fn multiplication_binds_tighter_than_addition() {
+        assert_eq!(get_eval("1 + 2 * 3").unwrap(), Value::Number(7.0));
+    }
 
-//     #[test]
-//     fn evaluate_to_string_formats_like_lox_numbers() {
-//         let expr = get_parse_result("42").expect("parse");
-//         assert_eq!(Interpret::evaluate_to_string(&expr).unwrap(), "42");
-//     }
+    #[test]
+    fn comparison_errors_when_operands_are_not_both_numbers() {
+        let err = get_eval("3 < true").expect_err("number vs bool comparison should error");
+        assert!(
+            err.message.contains("Operands must be numbers"),
+            "unexpected message: {}",
+            err.message
+        );
+    }
 
-//     #[test]
-//     fn subtraction_chains_left_to_right() {
-//         assert_eq!(get_eval("10 - 3 - 2").unwrap(), Value::Number(5.0));
-//     }
+    #[test]
+    fn equality_works_across_mixed_operand_types() {
+        assert_eq!(get_eval("1 == true").unwrap(), Value::Bool(false));
+        assert_eq!(get_eval("\"hi\" != 1").unwrap(), Value::Bool(true));
+    }
 
-//     #[test]
-//     fn addition_and_multiplication_mix_respects_precedence() {
-//         assert_eq!(get_eval("1 + 2 * 3 + 4").unwrap(), Value::Number(11.0));
-//     }
+    #[test]
+    fn chained_equality_is_left_associative() {
+        assert_eq!(get_eval("true == false == false").unwrap(), Value::Bool(true));
+        assert_eq!(get_eval("1 == 2 != 3").unwrap(), Value::Bool(true));
+    }
 
-//     #[test]
-//     fn unary_bang_binds_tighter_than_equality() {
-//         assert_eq!(get_eval("!false == true").unwrap(), Value::Bool(true));
-//     }
+    #[test]
+    fn evaluate_to_string_formats_like_lox_numbers() {
+        let expr = get_parse_result("42").expect("parse");
+        assert_eq!(Interpret::evaluate_to_string(&expr).unwrap(), "42");
+    }
 
-//     #[test]
-//     fn star_errors_when_operands_are_not_numbers() {
-//         let err = get_eval("3 * true").expect_err("* with bool should error");
-//         assert!(
-//             err.message.contains("Operands must be numbers"),
-//             "unexpected message: {}",
-//             err.message
-//         );
-//     }
+    #[test]
+    fn subtraction_chains_left_to_right() {
+        assert_eq!(get_eval("10 - 3 - 2").unwrap(), Value::Number(5.0));
+    }
 
-//     #[test]
-//     fn slash_errors_when_operands_are_not_numbers() {
-//         let err = get_eval("\"x\" / 2").expect_err("string / number should error");
-//         assert!(
-//             err.message.contains("Operands must be numbers"),
-//             "unexpected message: {}",
-//             err.message
-//         );
-//     }
+    #[test]
+    fn addition_and_multiplication_mix_respects_precedence() {
+        assert_eq!(get_eval("1 + 2 * 3 + 4").unwrap(), Value::Number(11.0));
+    }
 
-//     #[test]
-//     fn nested_grouping_preserves_literal_value() {
-//         assert_eq!(get_eval("((42))").unwrap(), Value::Number(42.0));
-//     }
+    #[test]
+    fn unary_bang_binds_tighter_than_equality() {
+        assert_eq!(get_eval("!false == true").unwrap(), Value::Bool(true));
+    }
 
-//     #[test]
-//     fn grouped_subexpression_precedence_inside_factors() {
-//         assert_eq!(get_eval("(1 + 2) * (3 - 4 / 2)").unwrap(), Value::Number(3.0));
-//     }
+    #[test]
+    fn star_errors_when_operands_are_not_numbers() {
+        let err = get_eval("3 * true").expect_err("* with bool should error");
+        assert!(
+            err.message.contains("Operands must be numbers"),
+            "unexpected message: {}",
+            err.message
+        );
+    }
 
-//     #[test]
-//     fn minus_errors_when_operand_is_not_a_number() {
-//         let err = get_eval("\"a\" - 1").expect_err("string - number should error");
-//         assert!(
-//             err.message.contains("Operands must be numbers"),
-//             "unexpected message: {}",
-//             err.message
-//         );
-//     }
+    #[test]
+    fn slash_errors_when_operands_are_not_numbers() {
+        let err = get_eval("\"x\" / 2").expect_err("string / number should error");
+        assert!(
+            err.message.contains("Operands must be numbers"),
+            "unexpected message: {}",
+            err.message
+        );
+    }
 
-//     #[test]
-//     fn chained_comparison_errors_when_result_is_not_comparable_as_number() {
-//         let err = get_eval("3 > 2 > 1").expect_err("bool compared to number should error");
-//         assert!(
-//             err.message.contains("Operands must be numbers"),
-//             "unexpected message: {}",
-//             err.message
-//         );
-//     }
+    #[test]
+    fn nested_grouping_preserves_literal_value() {
+        assert_eq!(get_eval("((42))").unwrap(), Value::Number(42.0));
+    }
 
-//     #[test]
-//     fn chained_unary_minus_double_negates() {
-//         assert_eq!(get_eval("--1").unwrap(), Value::Number(1.0));
-//     }
+    #[test]
+    fn grouped_subexpression_precedence_inside_factors() {
+        assert_eq!(get_eval("(1 + 2) * (3 - 4 / 2)").unwrap(), Value::Number(3.0));
+    }
 
-//     #[test]
-//     fn bang_on_string_uses_truthiness() {
-//         assert_eq!(get_eval("!\"hi\"").unwrap(), Value::Bool(false));
-//     }
+    #[test]
+    fn minus_errors_when_operand_is_not_a_number() {
+        let err = get_eval("\"a\" - 1").expect_err("string - number should error");
+        assert!(
+            err.message.contains("Operands must be numbers"),
+            "unexpected message: {}",
+            err.message
+        );
+    }
 
-//     #[test]
-//     fn evaluate_to_string_formats_boolean_literals() {
-//         let expr = get_parse_result("false").expect("parse");
-//         assert_eq!(Interpret::evaluate_to_string(&expr).unwrap(), "false");
-//     }
+    #[test]
+    fn chained_comparison_errors_when_result_is_not_comparable_as_number() {
+        let err = get_eval("3 > 2 > 1").expect_err("bool compared to number should error");
+        assert!(
+            err.message.contains("Operands must be numbers"),
+            "unexpected message: {}",
+            err.message
+        );
+    }
 
-//     #[test]
-//     fn string_inequality_compares_lexeme_payloads() {
-//         assert_eq!(get_eval("\"a\" != \"b\"").unwrap(), Value::Bool(true));
-//     }
-// }
+    #[test]
+    fn chained_unary_minus_double_negates() {
+        assert_eq!(get_eval("--1").unwrap(), Value::Number(1.0));
+    }
+
+    #[test]
+    fn bang_on_string_uses_truthiness() {
+        assert_eq!(get_eval("!\"hi\"").unwrap(), Value::Bool(false));
+    }
+
+    #[test]
+    fn evaluate_to_string_formats_boolean_literals() {
+        let expr = get_parse_result("false").expect("parse");
+        assert_eq!(Interpret::evaluate_to_string(&expr).unwrap(), "false");
+    }
+
+    #[test]
+    fn string_inequality_compares_lexeme_payloads() {
+        assert_eq!(get_eval("\"a\" != \"b\"").unwrap(), Value::Bool(true));
+    }
+}
