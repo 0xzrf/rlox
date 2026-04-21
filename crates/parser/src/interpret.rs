@@ -288,6 +288,70 @@ impl Interpret {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::{Interpret, Value};
+    use crate::ast::{Expr, Literal, Stmt};
+    use interpreter_types::{Token, TokenType};
+
+    fn ident(name: &str) -> Token {
+        Token::new(
+            TokenType::IDENTIFIER,
+            1,
+            name.to_string(),
+            0,
+            String::new(),
+        )
+    }
+
+    #[test]
+    fn execute_block_restores_previous_environment() {
+        let mut interpreter = Interpret::new();
+        interpreter.env_define("a".to_string(), Some(Value::Number(1.0)));
+
+        let block = vec![Stmt::Var {
+            name: ident("a"),
+            initializer: Some(Expr::Literal {
+                value: Literal::Number("2.0".to_string()),
+            }),
+        }];
+
+        interpreter.execute_block(&block).unwrap();
+
+        let a = Expr::Variable { name: ident("a") };
+        assert_eq!(interpreter.evaluate(&a).unwrap(), Value::Number(1.0));
+    }
+
+    #[test]
+    fn execute_block_uses_inner_scope_for_variable_resolution() {
+        let mut interpreter = Interpret::new();
+        interpreter.env_define("a".to_string(), Some(Value::Number(1.0)));
+        interpreter.env_define("b".to_string(), Some(Value::Number(0.0)));
+
+        let block = vec![
+            Stmt::Var {
+                name: ident("a"),
+                initializer: Some(Expr::Literal {
+                    value: Literal::Number("2.0".to_string()),
+                }),
+            },
+            Stmt::Expression {
+                expr: Expr::Assign {
+                    name: ident("b"),
+                    value: Box::new(Expr::Variable { name: ident("a") }),
+                },
+            },
+        ];
+
+        interpreter.execute_block(&block).unwrap();
+
+        let a = Expr::Variable { name: ident("a") };
+        let b = Expr::Variable { name: ident("b") };
+        assert_eq!(interpreter.evaluate(&a).unwrap(), Value::Number(1.0));
+        assert_eq!(interpreter.evaluate(&b).unwrap(), Value::Number(2.0));
+    }
+}
+
 
 // #[cfg(test)]
 // mod interpret_tests {
