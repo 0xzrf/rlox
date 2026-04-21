@@ -2,11 +2,7 @@ use parser::{Expr, Literal, Parser, Stmt};
 use scanner::Scanner;
 
 fn parse_program(source_code: &str) -> Vec<Stmt> {
-    let tokens = Scanner::_new(source_code.to_string())
-        .scan(false)
-        .unwrap()
-        .0
-        .get_tokens();
+    let tokens = Scanner::_new(source_code.to_string()).scan(false).unwrap().0.get_tokens();
     Parser::new(&tokens).parse().unwrap()
 }
 
@@ -41,3 +37,43 @@ fn parses_print_statement_with_variable_expression() {
     assert_eq!(name.lexeme, "a");
 }
 
+#[test]
+fn parses_var_declaration_without_initializer() {
+    let mut stmts = parse_program("var a;");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Var { name, initializer } = stmts.remove(0) else {
+        panic!("expected var declaration stmt");
+    };
+
+    assert_eq!(name.lexeme, "a");
+    assert!(initializer.is_none(), "expected no initializer");
+}
+
+#[test]
+fn parses_block_statement_with_multiple_statements() {
+    let mut stmts = parse_program("{ var a = 1; print a; }");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Block { stmts: inner } = stmts.remove(0) else {
+        panic!("expected block stmt");
+    };
+    assert_eq!(inner.len(), 2);
+
+    let Stmt::Var { name, initializer } = &inner[0] else {
+        panic!("expected var stmt as first block stmt");
+    };
+    assert_eq!(name.lexeme, "a");
+    let Some(Expr::Literal { value }) = initializer else {
+        panic!("expected initializer expr");
+    };
+    assert_eq!(value, &Literal::Number("1.0".to_string()));
+
+    let Stmt::Print { expr } = &inner[1] else {
+        panic!("expected print stmt as second block stmt");
+    };
+    let Expr::Variable { name } = expr else {
+        panic!("expected variable expr in print");
+    };
+    assert_eq!(name.lexeme, "a");
+}
