@@ -48,10 +48,11 @@ impl Env {
 
 #[cfg(test)]
 mod tests {
-    use super::Env;
-    use crate::interpret::Value;
     use std::cell::RefCell;
     use std::rc::Rc;
+
+    use super::Env;
+    use crate::interpret::Value;
 
     #[test]
     fn assign_updates_value_in_current_scope() {
@@ -76,18 +77,13 @@ mod tests {
 
         let inner = Env::new(Some(outer.clone()));
 
-        assert_eq!(
-            inner.get_owned("a"),
-            Some(Value::String("outer".to_string()))
-        );
+        assert_eq!(inner.get_owned("a"), Some(Value::String("outer".to_string())));
     }
 
     #[test]
     fn assign_updates_value_in_enclosing_scope() {
         let global = Rc::new(RefCell::new(Env::new(None)));
-        global
-            .borrow_mut()
-            .define("a".to_string(), Some(Value::Number(1.0)));
+        global.borrow_mut().define("a".to_string(), Some(Value::Number(1.0)));
 
         let mut inner = Env::new(Some(global.clone()));
         inner.assign("a".to_string(), Value::Number(3.0)).unwrap();
@@ -122,9 +118,7 @@ mod tests {
     #[test]
     fn inner_define_shadows_global_without_mutating_global() {
         let global = Rc::new(RefCell::new(Env::new(None)));
-        global
-            .borrow_mut()
-            .define("a".to_string(), Some(Value::Number(1.0)));
+        global.borrow_mut().define("a".to_string(), Some(Value::Number(1.0)));
 
         let mut inner = Env::new(Some(global.clone()));
         inner.define("a".to_string(), Some(Value::Number(2.0)));
@@ -136,14 +130,10 @@ mod tests {
     #[test]
     fn assign_updates_nearest_defined_scope() {
         let global = Rc::new(RefCell::new(Env::new(None)));
-        global
-            .borrow_mut()
-            .define("a".to_string(), Some(Value::Number(1.0)));
+        global.borrow_mut().define("a".to_string(), Some(Value::Number(1.0)));
 
         let middle = Rc::new(RefCell::new(Env::new(Some(global.clone()))));
-        middle
-            .borrow_mut()
-            .define("a".to_string(), Some(Value::Number(2.0)));
+        middle.borrow_mut().define("a".to_string(), Some(Value::Number(2.0)));
 
         let mut inner = Env::new(Some(middle.clone()));
         inner.assign("a".to_string(), Value::Number(3.0)).unwrap();

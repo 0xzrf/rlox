@@ -82,7 +82,6 @@ impl<'a> Parser<'a> {
 
         self.consume(&RIGHT_PAREN, "Expected \")\" after while")?;
 
-
         let body = Box::new(self.statement()?);
 
         Ok(Stmt::While { body, condition })
