@@ -113,6 +113,23 @@ impl Interpret {
                 return Ok(eval);
             }
 
+            Logical { left, operator, right } => {
+                let left = self.eval(left)?;
+                let mut return_left = false;
+
+                if operator.token_ty == TokenType::OR {
+                    if Self::is_truthy(&left) {
+                        return_left = true;
+                    }
+                } else {
+                    if !Self::is_truthy(&left) {
+                        return_left = true;
+                    }
+                }
+
+                if return_left { Ok(left) } else { self.eval(right) }
+            }
+
             Binary { left, operator, right } => {
                 let left_val = self.eval(left)?;
                 let right_val = self.eval(right)?;

@@ -122,7 +122,7 @@ impl<'a> Parser<'a> {
     }
 
     fn assignment(&mut self) -> ParserResult<Expr> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         if self.match_any(&[EQUAL]) {
             let _equal = self.prev();
@@ -134,6 +134,38 @@ impl<'a> Parser<'a> {
             return Err(ParserError::ParseError {
                 msg: "Invalid assignment target".to_string(),
             });
+        }
+
+        Ok(expr)
+    }
+
+    fn or(&mut self) -> ParserResult<Expr> {
+        let mut expr = self.and()?;
+
+        while self.match_any(&[OR]) {
+            let operator = *self.prev();
+            let right = self.and()?;
+            expr = Expr::Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            }
+        }
+
+        Ok(expr)
+    }
+
+    fn and(&mut self) -> ParserResult<Expr> {
+        let mut expr = self.equality()?;
+
+        while self.match_any(&[AND]) {
+            let operator = *self.prev();
+            let right = self.and()?;
+            expr = Expr::Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            }
         }
 
         Ok(expr)
