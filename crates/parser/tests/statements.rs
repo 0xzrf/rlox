@@ -119,3 +119,43 @@ fn parses_multiple_top_level_statements_in_order() {
     };
     assert_eq!(name.lexeme, "a");
 }
+
+#[test]
+fn parses_print_statement_with_string_literal() {
+    let mut stmts = parse_program("print \"hello\";");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Print { expr } = stmts.remove(0) else {
+        panic!("expected print stmt");
+    };
+
+    let Expr::Literal { value } = expr else {
+        panic!("expected literal expr");
+    };
+    assert_eq!(value, Literal::String("hello".to_string()));
+}
+
+#[test]
+fn parses_nested_block_statements() {
+    let mut stmts = parse_program("{ { var a = 1; } }");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Block { stmts: outer } = stmts.remove(0) else {
+        panic!("expected outer block");
+    };
+    assert_eq!(outer.len(), 1);
+
+    let Stmt::Block { stmts: inner } = &outer[0] else {
+        panic!("expected inner block");
+    };
+    assert_eq!(inner.len(), 1);
+
+    let Stmt::Var { name, initializer } = &inner[0] else {
+        panic!("expected var stmt inside inner block");
+    };
+    assert_eq!(name.lexeme, "a");
+    let Some(Expr::Literal { value }) = initializer else {
+        panic!("expected initializer");
+    };
+    assert_eq!(value, &Literal::Number("1.0".to_string()));
+}
