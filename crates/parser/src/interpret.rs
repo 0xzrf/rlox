@@ -430,6 +430,71 @@ mod tests {
         let b = Expr::Variable { name: ident("b") };
         assert_eq!(interpreter.evaluate(&b).unwrap(), Value::Number(1.0));
     }
+
+    #[test]
+    fn nested_block_shadowing_does_not_leak_outside() {
+        let mut interpreter = Interpret::new();
+        interpreter.env_define("a".to_string(), Some(Value::String("global".to_string())));
+
+        let program = vec![Stmt::Block {
+            stmts: vec![
+                Stmt::Var {
+                    name: ident("a"),
+                    initializer: Some(Expr::Literal {
+                        value: Literal::String("outer".to_string()),
+                    }),
+                },
+                Stmt::Block {
+                    stmts: vec![Stmt::Var {
+                        name: ident("a"),
+                        initializer: Some(Expr::Literal {
+                            value: Literal::String("inner".to_string()),
+                        }),
+                    }],
+                },
+            ],
+        }];
+
+        interpreter.interpret_stmts(&program).unwrap();
+
+        let a = Expr::Variable { name: ident("a") };
+        assert_eq!(
+            interpreter.evaluate(&a).unwrap(),
+            Value::String("global".to_string())
+        );
+    }
+
+    #[test]
+    fn assignment_in_inner_block_updates_enclosing_variable() {
+        let mut interpreter = Interpret::new();
+        interpreter.env_define("a".to_string(), Some(Value::Number(1.0)));
+
+        let program = vec![Stmt::Block {
+            stmts: vec![
+                Stmt::Var {
+                    name: ident("b"),
+                    initializer: Some(Expr::Literal {
+                        value: Literal::Number("2.0".to_string()),
+                    }),
+                },
+                Stmt::Block {
+                    stmts: vec![Stmt::Expression {
+                        expr: Expr::Assign {
+                            name: ident("a"),
+                            value: Box::new(Expr::Literal {
+                                value: Literal::Number("3.0".to_string()),
+                            }),
+                        },
+                    }],
+                },
+            ],
+        }];
+
+        interpreter.interpret_stmts(&program).unwrap();
+
+        let a = Expr::Variable { name: ident("a") };
+        assert_eq!(interpreter.evaluate(&a).unwrap(), Value::Number(3.0));
+    }
 }
 
 
