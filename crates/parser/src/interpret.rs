@@ -350,6 +350,29 @@ mod tests {
         assert_eq!(interpreter.evaluate(&a).unwrap(), Value::Number(1.0));
         assert_eq!(interpreter.evaluate(&b).unwrap(), Value::Number(2.0));
     }
+
+    #[test]
+    fn reading_undefined_variable_errors() {
+        let mut interpreter = Interpret::new();
+        let expr = Expr::Variable { name: ident("missing") };
+
+        let err = interpreter.evaluate(&expr).expect_err("expected undefined variable to error");
+        assert!(err.message.contains("Undefined variable 'missing'"), "got: {err}");
+    }
+
+    #[test]
+    fn assigning_undefined_variable_errors() {
+        let mut interpreter = Interpret::new();
+        let expr = Expr::Assign {
+            name: ident("missing"),
+            value: Box::new(Expr::Literal {
+                value: Literal::Number("1.0".to_string()),
+            }),
+        };
+
+        let err = interpreter.evaluate(&expr).expect_err("expected undefined assignment to error");
+        assert!(err.message.contains("Undefined variable 'missing'"), "got: {err}");
+    }
 }
 
 
