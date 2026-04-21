@@ -373,6 +373,35 @@ mod tests {
         let err = interpreter.evaluate(&expr).expect_err("expected undefined assignment to error");
         assert!(err.message.contains("Undefined variable 'missing'"), "got: {err}");
     }
+
+    #[test]
+    fn plus_concatenates_two_strings() {
+        let mut interpreter = Interpret::new();
+        let expr = Expr::Binary {
+            left: Box::new(Expr::Literal {
+                value: Literal::String("hello".to_string()),
+            }),
+            operator: Token::new(TokenType::PLUS, 1, "+".to_string(), 0, String::new()),
+            right: Box::new(Expr::Literal {
+                value: Literal::String(" world".to_string()),
+            }),
+        };
+
+        assert_eq!(
+            interpreter.evaluate(&expr).unwrap(),
+            Value::String("hello world".to_string())
+        );
+    }
+
+    #[test]
+    fn evaluate_to_string_trims_trailing_dot_zero() {
+        let mut interpreter = Interpret::new();
+        let expr = Expr::Literal {
+            value: Literal::Number("42.0".to_string()),
+        };
+
+        assert_eq!(interpreter.evaluate_to_string(&expr).unwrap(), "42");
+    }
 }
 
 
