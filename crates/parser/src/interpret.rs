@@ -495,6 +495,83 @@ mod tests {
         let a = Expr::Variable { name: ident("a") };
         assert_eq!(interpreter.evaluate(&a).unwrap(), Value::Number(3.0));
     }
+
+    #[test]
+    fn assign_updates_nearest_enclosing_binding_not_global() {
+        let mut interpreter = Interpret::new();
+        interpreter.env_define("a".to_string(), Some(Value::Number(1.0)));
+
+        let program = vec![Stmt::Block {
+            stmts: vec![
+                Stmt::Var {
+                    name: ident("a"),
+                    initializer: Some(Expr::Literal {
+                        value: Literal::Number("2.0".to_string()),
+                    }),
+                },
+                Stmt::Block {
+                    stmts: vec![Stmt::Expression {
+                        expr: Expr::Assign {
+                            name: ident("a"),
+                            value: Box::new(Expr::Literal {
+                                value: Literal::Number("3.0".to_string()),
+                            }),
+                        },
+                    }],
+                },
+            ],
+        }];
+
+        interpreter.interpret_stmts(&program).unwrap();
+
+        let a = Expr::Variable { name: ident("a") };
+        assert_eq!(interpreter.evaluate(&a).unwrap(), Value::Number(1.0));
+    }
+
+    #[test]
+    fn inner_shadowing_does_not_affect_outer_reads_after_inner_block() {
+        let mut interpreter = Interpret::new();
+
+        let program = vec![
+            Stmt::Var {
+                name: ident("a"),
+                initializer: Some(Expr::Literal {
+                    value: Literal::Number("1.0".to_string()),
+                }),
+            },
+            Stmt::Block {
+                stmts: vec![
+                    Stmt::Var {
+                        name: ident("a"),
+                        initializer: Some(Expr::Literal {
+                            value: Literal::Number("2.0".to_string()),
+                        }),
+                    },
+                    Stmt::Block {
+                        stmts: vec![Stmt::Var {
+                            name: ident("a"),
+                            initializer: Some(Expr::Literal {
+                                value: Literal::Number("3.0".to_string()),
+                            }),
+                        }],
+                    },
+                    Stmt::Expression {
+                        expr: Expr::Assign {
+                            name: ident("a"),
+                            value: Box::new(Expr::Literal {
+                                value: Literal::Number("4.0".to_string()),
+                            }),
+                        },
+                    },
+                ],
+            },
+        ];
+
+        interpreter.interpret_stmts(&program).unwrap();
+
+        let a = Expr::Variable { name: ident("a") };
+        assert_eq!(interpreter.evaluate(&a).unwrap(), Value::Number(1.0));
+    }
 }
 
 
