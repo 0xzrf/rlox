@@ -13,10 +13,24 @@ use crate::interpret::{Interpret, RuntimeError};
 
 #[derive(Debug)]
 pub enum Stmt {
-    Expression { expr: Expr },
-    Print { expr: Expr },
-    Var { name: Token, initializer: Option<Expr> },
-    Block { stmts: Vec<Stmt> },
+    Expression {
+        expr: Expr,
+    },
+    Print {
+        expr: Expr,
+    },
+    Var {
+        name: Token,
+        initializer: Option<Expr>,
+    },
+    Block {
+        stmts: Vec<Stmt>,
+    },
+    IfStmt {
+        condition: Expr,
+        then_branch: Box<Stmt>,
+        else_branch: Option<Box<Stmt>>,
+    },
 }
 
 impl Stmt {
@@ -44,6 +58,7 @@ impl Stmt {
                 interpreter.execute_block(stmts)?;
                 Ok(())
             }
+            _ => Ok(()),
         }
     }
 }

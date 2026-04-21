@@ -56,6 +56,10 @@ impl<'a> Parser<'a> {
     }
 
     fn statement(&mut self) -> ParserResult<Stmt> {
+        if self.match_any(&[IF]) {
+            return self.if_statement();
+        }
+
         if self.match_any(&[PRINT]) {
             return self.print_statment();
         }
@@ -65,6 +69,24 @@ impl<'a> Parser<'a> {
         }
 
         self.expression_stmt()
+    }
+
+    fn if_statement(&mut self) -> ParserResult<Stmt> {
+        self.consume(&LEFT_PAREN, "Expected \"(\" after if")?;
+
+        let condition = self.expression()?;
+
+        self.consume(&RIGHT_PAREN, "Expected \"(\" after if")?;
+
+        let then_branch = Box::new(self.statement()?);
+
+        let mut else_branch = None;
+
+        if self.match_any(&[ELSE]) {
+            else_branch = Some(Box::new(self.statement()?));
+        }
+
+        Ok(Stmt::IfStmt { condition, then_branch, else_branch })
     }
 
     fn block(&mut self) -> ParserResult<Stmt> {
