@@ -402,6 +402,42 @@ mod tests {
 
         assert_eq!(interpreter.evaluate_to_string(&expr).unwrap(), "42");
     }
+
+    #[test]
+    fn block_declared_variable_is_not_visible_after_block() {
+        let mut interpreter = Interpret::new();
+
+        let block = vec![Stmt::Var {
+            name: ident("a"),
+            initializer: Some(Expr::Literal {
+                value: Literal::Number("1.0".to_string()),
+            }),
+        }];
+
+        interpreter.execute_block(&block).unwrap();
+
+        let a = Expr::Variable { name: ident("a") };
+        assert!(interpreter.evaluate(&a).is_err(), "expected a to be out of scope");
+    }
+
+    #[test]
+    fn block_reads_global_when_not_shadowed() {
+        let mut interpreter = Interpret::new();
+        interpreter.env_define("a".to_string(), Some(Value::Number(1.0)));
+        interpreter.env_define("b".to_string(), Some(Value::Number(0.0)));
+
+        let block = vec![Stmt::Expression {
+            expr: Expr::Assign {
+                name: ident("b"),
+                value: Box::new(Expr::Variable { name: ident("a") }),
+            },
+        }];
+
+        interpreter.execute_block(&block).unwrap();
+
+        let b = Expr::Variable { name: ident("b") };
+        assert_eq!(interpreter.evaluate(&b).unwrap(), Value::Number(1.0));
+    }
 }
 
 
