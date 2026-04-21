@@ -118,4 +118,38 @@ mod tests {
         let inner = Env::new(Some(global));
         assert_eq!(inner.get_owned("missing"), None);
     }
+
+    #[test]
+    fn inner_define_shadows_global_without_mutating_global() {
+        let global = Rc::new(RefCell::new(Env::new(None)));
+        global
+            .borrow_mut()
+            .define("a".to_string(), Some(Value::Number(1.0)));
+
+        let mut inner = Env::new(Some(global.clone()));
+        inner.define("a".to_string(), Some(Value::Number(2.0)));
+
+        assert_eq!(inner.get_owned("a"), Some(Value::Number(2.0)));
+        assert_eq!(global.borrow().get_owned("a"), Some(Value::Number(1.0)));
+    }
+
+    #[test]
+    fn assign_updates_nearest_defined_scope() {
+        let global = Rc::new(RefCell::new(Env::new(None)));
+        global
+            .borrow_mut()
+            .define("a".to_string(), Some(Value::Number(1.0)));
+
+        let middle = Rc::new(RefCell::new(Env::new(Some(global.clone()))));
+        middle
+            .borrow_mut()
+            .define("a".to_string(), Some(Value::Number(2.0)));
+
+        let mut inner = Env::new(Some(middle.clone()));
+        inner.assign("a".to_string(), Value::Number(3.0)).unwrap();
+
+        assert_eq!(global.borrow().get_owned("a"), Some(Value::Number(1.0)));
+        assert_eq!(middle.borrow().get_owned("a"), Some(Value::Number(3.0)));
+        assert_eq!(inner.get_owned("a"), Some(Value::Number(3.0)));
+    }
 }

@@ -290,18 +290,13 @@ impl Interpret {
 
 #[cfg(test)]
 mod tests {
-    use super::{Interpret, Value};
-    use crate::ast::{Expr, Literal, Stmt};
     use interpreter_types::{Token, TokenType};
 
+    use super::{Interpret, Value};
+    use crate::ast::{Expr, Literal, Stmt};
+
     fn ident(name: &str) -> Token {
-        Token::new(
-            TokenType::IDENTIFIER,
-            1,
-            name.to_string(),
-            0,
-            String::new(),
-        )
+        Token::new(TokenType::IDENTIFIER, 1, name.to_string(), 0, String::new())
     }
 
     #[test]
@@ -387,10 +382,7 @@ mod tests {
             }),
         };
 
-        assert_eq!(
-            interpreter.evaluate(&expr).unwrap(),
-            Value::String("hello world".to_string())
-        );
+        assert_eq!(interpreter.evaluate(&expr).unwrap(), Value::String("hello world".to_string()));
     }
 
     #[test]
