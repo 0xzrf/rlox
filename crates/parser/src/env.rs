@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::interpret::Value;
@@ -14,19 +14,14 @@ pub struct Env {
 
 impl Env {
     pub fn new(enclosing: Option<EnvRef>) -> Self {
-        Self {
-            values: HashMap::new(),
-            enclosing,
-        }
+        Self { values: HashMap::new(), enclosing }
     }
 
     pub fn get_owned(&self, name: &str) -> Option<Value> {
         if let Some(val) = self.values.get(name) {
             return Some(val.clone());
         }
-        self.enclosing
-            .as_ref()
-            .and_then(|e| e.borrow().get_owned(name))
+        self.enclosing.as_ref().and_then(|e| e.borrow().get_owned(name))
     }
 
     pub fn define(&mut self, name: String, value: Option<Value>) {
@@ -48,6 +43,5 @@ impl Env {
         }
 
         Err(format!("Undefined variable '{}'.", name))
-
     }
 }

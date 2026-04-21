@@ -6,7 +6,7 @@ rust-version.workspace = true
 autobins = false
 
 [[bin]]
-name = "codecrafters-interpreter"
+name = "interpreter-cli"
 path = "src/main.rs"
 
 [dependencies]

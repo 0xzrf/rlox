@@ -1,5 +1,5 @@
-use std::fmt;
 use std::cell::RefCell;
+use std::fmt;
 use std::rc::Rc;
 
 use interpreter_types::{Token, TokenType};
@@ -109,10 +109,7 @@ impl Interpret {
                 self.env
                     .borrow_mut()
                     .assign(name.lexeme.clone(), eval.clone())
-                    .map_err(|msg| RuntimeError {
-                        token: name.clone(),
-                        message: msg,
-                    })?;
+                    .map_err(|msg| RuntimeError { token: name.clone(), message: msg })?;
                 return Ok(eval);
             }
 

@@ -40,9 +40,9 @@ impl Commands {
                         match InterpreterParser::new(&tokens).parse() {
                             Ok(stmts) => {
                                 let mut interpreter = Interpret::new();
-                                interpreter
-                                    .interpret_stmts(&stmts)
-                                    .map_err(|e| CliErrors::RuntimeError { reason: e.to_string() })?;
+                                interpreter.interpret_stmts(&stmts).map_err(|e| {
+                                    CliErrors::RuntimeError { reason: e.to_string() }
+                                })?;
 
                                 Ok(0)
                             }
