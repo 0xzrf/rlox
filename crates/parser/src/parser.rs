@@ -64,6 +64,10 @@ impl<'a> Parser<'a> {
             return self.print_statment();
         }
 
+        if self.match_any(&[WHILE]) {
+            return self.while_stmt();
+        }
+
         if self.match_any(&[LEFT_BRACE]) {
             return self.block();
         }
@@ -71,12 +75,25 @@ impl<'a> Parser<'a> {
         self.expression_stmt()
     }
 
+    fn while_stmt(&mut self) -> ParserResult<Stmt> {
+        self.consume(&LEFT_PAREN, "Expected \"(\" after while")?;
+
+        let condition = self.expression()?;
+
+        self.consume(&RIGHT_PAREN, "Expected \")\" after while")?;
+
+
+        let body = Box::new(self.statement()?);
+
+        Ok(Stmt::While { body, condition })
+    }
+
     fn if_statement(&mut self) -> ParserResult<Stmt> {
         self.consume(&LEFT_PAREN, "Expected \"(\" after if")?;
 
         let condition = self.expression()?;
 
-        self.consume(&RIGHT_PAREN, "Expected \"(\" after if")?;
+        self.consume(&RIGHT_PAREN, "Expected \")\" after if")?;
 
         let then_branch = Box::new(self.statement()?);
 
@@ -143,7 +160,7 @@ impl<'a> Parser<'a> {
         let mut expr = self.and()?;
 
         while self.match_any(&[OR]) {
-            let operator = *self.prev();
+            let operator = self.prev().clone();
             let right = self.and()?;
             expr = Expr::Logical {
                 left: Box::new(expr),
@@ -159,7 +176,7 @@ impl<'a> Parser<'a> {
         let mut expr = self.equality()?;
 
         while self.match_any(&[AND]) {
-            let operator = *self.prev();
+            let operator = self.prev().clone();
             let right = self.and()?;
             expr = Expr::Logical {
                 left: Box::new(expr),

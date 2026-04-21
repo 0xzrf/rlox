@@ -107,6 +107,9 @@ impl Expr {
             Expr::Unary { operator, right } => parenthesize(&operator.lexeme, &[right]),
             Expr::Variable { name } => name.lexeme.clone(),
             Expr::Assign { name, value } => parenthesize(&format!("= {}", name.lexeme), &[value]),
+            Expr::Logical { left, operator, right } => {
+                parenthesize(&format!("{}", operator.lexeme), &[left, right])
+            }
         }
     }
 }
