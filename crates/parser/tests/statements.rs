@@ -196,3 +196,39 @@ fn parses_var_initializer_as_binary_expression() {
     assert_eq!(left_val, Literal::Number("1.0".to_string()));
     assert_eq!(right_val, Literal::Number("2.0".to_string()));
 }
+
+#[test]
+fn parses_print_statement_with_binary_expression() {
+    let mut stmts = parse_program("print 1 + 2;");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Print { expr } = stmts.remove(0) else {
+        panic!("expected print stmt");
+    };
+
+    let Expr::Binary { left, operator, right } = expr else {
+        panic!("expected binary expr");
+    };
+    assert_eq!(operator.lexeme, "+");
+
+    let Expr::Literal { value: left_val } = *left else {
+        panic!("expected literal left operand");
+    };
+    let Expr::Literal { value: right_val } = *right else {
+        panic!("expected literal right operand");
+    };
+
+    assert_eq!(left_val, Literal::Number("1.0".to_string()));
+    assert_eq!(right_val, Literal::Number("2.0".to_string()));
+}
+
+#[test]
+fn parses_block_with_trailing_whitespace_and_newlines() {
+    let mut stmts = parse_program("{\n  var a = 1;\n  print a;\n}\n");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Block { stmts: inner } = stmts.remove(0) else {
+        panic!("expected block stmt");
+    };
+    assert_eq!(inner.len(), 2);
+}
