@@ -232,3 +232,39 @@ fn parses_block_with_trailing_whitespace_and_newlines() {
     };
     assert_eq!(inner.len(), 2);
 }
+
+#[test]
+fn parses_var_initializer_grouping_expression() {
+    let mut stmts = parse_program("var a = (1);");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Var { name, initializer } = stmts.remove(0) else {
+        panic!("expected var stmt");
+    };
+    assert_eq!(name.lexeme, "a");
+
+    let Some(Expr::Grouping { expression }) = initializer else {
+        panic!("expected grouping initializer");
+    };
+    let Expr::Literal { value } = *expression else {
+        panic!("expected literal inside grouping");
+    };
+    assert_eq!(value, Literal::Number("1.0".to_string()));
+}
+
+#[test]
+fn parses_print_statement_grouped_variable() {
+    let mut stmts = parse_program("print (a);");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Print { expr } = stmts.remove(0) else {
+        panic!("expected print stmt");
+    };
+    let Expr::Grouping { expression } = expr else {
+        panic!("expected grouping expr");
+    };
+    let Expr::Variable { name } = *expression else {
+        panic!("expected variable inside grouping");
+    };
+    assert_eq!(name.lexeme, "a");
+}
