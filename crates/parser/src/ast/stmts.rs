@@ -72,7 +72,10 @@ impl Stmt {
                 Ok(())
             }
             Stmt::While { condition, body } => {
-                todo!()
+                while Interpret::is_truthy(&interpreter.evaluate(condition)?) {
+                    body.eval(interpreter)?;
+                }
+                Ok(())
             }
         }
     }
