@@ -81,4 +81,27 @@ mod tests {
             Some(Value::String("outer".to_string()))
         );
     }
+
+    #[test]
+    fn assign_updates_value_in_enclosing_scope() {
+        let global = Rc::new(RefCell::new(Env::new(None)));
+        global
+            .borrow_mut()
+            .define("a".to_string(), Some(Value::Number(1.0)));
+
+        let mut inner = Env::new(Some(global.clone()));
+        inner.assign("a".to_string(), Value::Number(3.0)).unwrap();
+
+        assert_eq!(global.borrow().get_owned("a"), Some(Value::Number(3.0)));
+        assert_eq!(inner.get_owned("a"), Some(Value::Number(3.0)));
+    }
+
+    #[test]
+    fn assign_errors_on_undefined_variable() {
+        let mut env = Env::new(None);
+        let err = env
+            .assign("missing".to_string(), Value::Nil)
+            .expect_err("expected assignment to undefined variable to error");
+        assert!(err.contains("Undefined variable 'missing'"), "got: {err}");
+    }
 }
