@@ -257,6 +257,10 @@ impl<'a> Parser<'a> {
             return Ok(Expr::new_primary(Literal::Number(self.prev().literal.clone())));
         }
 
+        if self.match_any(&[NIL]) {
+            return Ok(Expr::new_primary(Literal::Nil));
+        }
+
         if self.match_any(&[STRING]) {
             return Ok(Expr::new_primary(Literal::String(self.prev().literal.clone())));
         }
