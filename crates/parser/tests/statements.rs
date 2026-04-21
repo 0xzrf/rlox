@@ -77,3 +77,45 @@ fn parses_block_statement_with_multiple_statements() {
     };
     assert_eq!(name.lexeme, "a");
 }
+
+#[test]
+fn parses_assignment_expression_statement() {
+    let mut stmts = parse_program("a = 3;");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Expression { expr } = stmts.remove(0) else {
+        panic!("expected expression stmt");
+    };
+
+    let Expr::Assign { name, value } = expr else {
+        panic!("expected assign expr");
+    };
+    assert_eq!(name.lexeme, "a");
+    let Expr::Literal { value } = *value else {
+        panic!("expected literal right-hand side");
+    };
+    assert_eq!(value, Literal::Number("3.0".to_string()));
+}
+
+#[test]
+fn parses_multiple_top_level_statements_in_order() {
+    let stmts = parse_program("var a = 1; print a;");
+    assert_eq!(stmts.len(), 2);
+
+    let Stmt::Var { name, initializer } = &stmts[0] else {
+        panic!("expected var stmt first");
+    };
+    assert_eq!(name.lexeme, "a");
+    let Some(Expr::Literal { value }) = initializer else {
+        panic!("expected initializer literal");
+    };
+    assert_eq!(value, &Literal::Number("1.0".to_string()));
+
+    let Stmt::Print { expr } = &stmts[1] else {
+        panic!("expected print stmt second");
+    };
+    let Expr::Variable { name } = expr else {
+        panic!("expected variable expr in print");
+    };
+    assert_eq!(name.lexeme, "a");
+}
