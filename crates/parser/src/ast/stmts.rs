@@ -58,7 +58,15 @@ impl Stmt {
                 interpreter.execute_block(stmts)?;
                 Ok(())
             }
-            _ => Ok(()),
+            Stmt::IfStmt { condition, then_branch, else_branch } => {
+                if Interpret::is_truthy(&interpreter.evaluate(condition)?) {
+                    then_branch.eval(interpreter)?;
+                } else if let Some(else_branch) = else_branch {
+                    else_branch.eval(interpreter)?;
+                }
+
+                Ok(())
+            }
         }
     }
 }

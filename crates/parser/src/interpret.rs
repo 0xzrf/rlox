@@ -208,7 +208,7 @@ impl Interpret {
         }
     }
 
-    fn is_truthy(value: &Value) -> bool {
+    pub fn is_truthy(value: &Value) -> bool {
         match value {
             Value::Nil => false,
             Value::Bool(b) => *b,
@@ -458,10 +458,7 @@ mod tests {
         interpreter.interpret_stmts(&program).unwrap();
 
         let a = Expr::Variable { name: ident("a") };
-        assert_eq!(
-            interpreter.evaluate(&a).unwrap(),
-            Value::String("global".to_string())
-        );
+        assert_eq!(interpreter.evaluate(&a).unwrap(), Value::String("global".to_string()));
     }
 
     #[test]
