@@ -104,4 +104,18 @@ mod tests {
             .expect_err("expected assignment to undefined variable to error");
         assert!(err.contains("Undefined variable 'missing'"), "got: {err}");
     }
+
+    #[test]
+    fn define_without_value_defaults_to_nil() {
+        let mut env = Env::new(None);
+        env.define("a".to_string(), None);
+        assert_eq!(env.get_owned("a"), Some(Value::Nil));
+    }
+
+    #[test]
+    fn get_owned_returns_none_for_missing_variable() {
+        let global = Rc::new(RefCell::new(Env::new(None)));
+        let inner = Env::new(Some(global));
+        assert_eq!(inner.get_owned("missing"), None);
+    }
 }
