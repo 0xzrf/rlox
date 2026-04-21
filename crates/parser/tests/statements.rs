@@ -159,3 +159,40 @@ fn parses_nested_block_statements() {
     };
     assert_eq!(value, &Literal::Number("1.0".to_string()));
 }
+
+#[test]
+fn parses_empty_block_statement() {
+    let mut stmts = parse_program("{}");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Block { stmts: inner } = stmts.remove(0) else {
+        panic!("expected block stmt");
+    };
+    assert!(inner.is_empty(), "expected empty block");
+}
+
+#[test]
+fn parses_var_initializer_as_binary_expression() {
+    let mut stmts = parse_program("var a = 1 + 2;");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Var { name, initializer } = stmts.remove(0) else {
+        panic!("expected var stmt");
+    };
+    assert_eq!(name.lexeme, "a");
+
+    let Some(Expr::Binary { left, operator, right }) = initializer else {
+        panic!("expected binary initializer");
+    };
+    assert_eq!(operator.lexeme, "+");
+
+    let Expr::Literal { value: left_val } = *left else {
+        panic!("expected literal left operand");
+    };
+    let Expr::Literal { value: right_val } = *right else {
+        panic!("expected literal right operand");
+    };
+
+    assert_eq!(left_val, Literal::Number("1.0".to_string()));
+    assert_eq!(right_val, Literal::Number("2.0".to_string()));
+}
