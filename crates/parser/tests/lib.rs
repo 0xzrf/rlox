@@ -22,9 +22,11 @@ pub mod parser_tests {
 
         match stmts.remove(0) {
             Stmt::Expression { expr } => Some(expr),
-            Stmt::Print { .. } | Stmt::Var { .. } | Stmt::Block { .. } | Stmt::IfStmt { .. } => {
-                None
-            }
+            Stmt::Print { .. }
+            | Stmt::Var { .. }
+            | Stmt::Block { .. }
+            | Stmt::IfStmt { .. }
+            | Stmt::While { .. } => None,
         }
     }
 
@@ -58,6 +60,7 @@ pub mod parser_tests {
                 Stmt::Var { .. } => "(var ...)".to_string(),
                 Stmt::Block { .. } => "(block ...)".to_string(),
                 Stmt::IfStmt { .. } => "(if ...)".to_string(),
+                Stmt::While { .. } => "(while ...)".to_string(),
             })
             .collect::<Vec<_>>();
 

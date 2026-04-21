@@ -68,11 +68,68 @@ impl<'a> Parser<'a> {
             return self.while_stmt();
         }
 
+        if self.match_any(&[FOR]) {
+            return self.for_stmt();
+        }
+
         if self.match_any(&[LEFT_BRACE]) {
             return self.block();
         }
 
         self.expression_stmt()
+    }
+
+    fn for_stmt(&mut self) -> ParserResult<Stmt> {
+        self.consume(&LEFT_PAREN, "Expected a ( after for statment")?;
+
+        let initializer: Option<Stmt>;
+
+        if self.check(&SEMICOLON) {
+            initializer = None;
+        } else if self.match_any(&[VAR]) {
+            initializer = Some(self.var_declaration()?);
+        } else {
+            initializer = Some(self.expression_stmt()?);
+        }
+
+        let mut condition = None;
+
+        if !self.check(&SEMICOLON) {
+            condition = Some(self.expression()?);
+        }
+
+        self.consume(&SEMICOLON, "expected a ; in the for loop")?;
+
+        let mut increment = None;
+
+        if !self.check(&RIGHT_PAREN) {
+            increment = Some(self.expression()?);
+        }
+
+        self.consume(&RIGHT_PAREN, "Expected a ) after for clauses")?;
+
+        let mut body = self.statement()?;
+
+        if let Some(inc) = increment {
+            body = Stmt::Block {
+                stmts: vec![body, Stmt::Expression { expr: inc }],
+            }
+        }
+
+        if condition.is_none() {
+            condition = Some(Expr::Literal { value: Literal::True });
+        }
+
+        body = Stmt::While {
+            body: Box::new(body),
+            condition: condition.unwrap(),
+        };
+
+        if let Some(init) = initializer {
+            body = Stmt::Block { stmts: vec![init, body] }
+        }
+
+        Ok(body)
     }
 
     fn while_stmt(&mut self) -> ParserResult<Stmt> {

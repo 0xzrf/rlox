@@ -1,9 +1,17 @@
-use parser::{Expr, Literal, Parser, Stmt};
+use parser::interpret::Value;
+use parser::{Expr, Interpret, Literal, Parser, Stmt};
 use scanner::Scanner;
 
 fn parse_program(source_code: &str) -> Vec<Stmt> {
     let tokens = Scanner::_new(source_code.to_string()).scan(false).unwrap().0.get_tokens();
     Parser::new(&tokens).parse().unwrap()
+}
+
+fn interpret_program(source_code: &str) -> Interpret {
+    let stmts = parse_program(source_code);
+    let mut interpreter = Interpret::new();
+    interpreter.interpret_stmts(&stmts).unwrap();
+    interpreter
 }
 
 #[test]
@@ -267,4 +275,60 @@ fn parses_print_statement_grouped_variable() {
         panic!("expected variable inside grouping");
     };
     assert_eq!(name.lexeme, "a");
+}
+
+#[test]
+fn parses_while_statement_with_block_body() {
+    let mut stmts = parse_program("while (a < 10) { a = a + 1; }");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::While { condition, body } = stmts.remove(0) else {
+        panic!("expected while stmt");
+    };
+
+    let Expr::Binary { left, operator, right } = condition else {
+        panic!("expected binary condition");
+    };
+    assert_eq!(operator.lexeme, "<");
+
+    let Expr::Variable { name: left_name } = *left else {
+        panic!("expected variable on left side of condition");
+    };
+    assert_eq!(left_name.lexeme, "a");
+
+    let Expr::Literal { value: right_value } = *right else {
+        panic!("expected literal on right side of condition");
+    };
+    assert_eq!(right_value, Literal::Number("10.0".to_string()));
+
+    let Stmt::Block { stmts: body_stmts } = *body else {
+        panic!("expected block body");
+    };
+    assert_eq!(body_stmts.len(), 1);
+}
+
+#[test]
+fn while_statement_executes_until_condition_is_false() {
+    let mut interpreter = interpret_program(
+        r#"
+        var i = 0;
+        while (i < 3) {
+          i = i + 1;
+        }
+        "#,
+    );
+
+    let i_value = interpreter
+        .evaluate(&Expr::Variable {
+            name: interpreter_types::Token::new(
+                interpreter_types::TokenType::IDENTIFIER,
+                1,
+                "i".to_string(),
+                0,
+                String::new(),
+            ),
+        })
+        .unwrap();
+
+    assert_eq!(i_value, Value::Number(3.0));
 }
