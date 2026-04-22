@@ -48,6 +48,47 @@ fn parses_function_declaration_with_params_and_body_statements() {
 }
 
 #[test]
+fn parses_multiple_function_declarations_in_order() {
+    let stmts = parse_program("fun a() {} fun b(x) { return x; }");
+    assert_eq!(stmts.len(), 2);
+
+    let Stmt::Function { name, params, body } = &stmts[0] else {
+        panic!("expected first stmt to be a function declaration");
+    };
+    assert_eq!(name.lexeme, "a");
+    assert!(params.is_empty());
+    assert!(body.is_empty());
+
+    let Stmt::Function { name, params, body } = &stmts[1] else {
+        panic!("expected second stmt to be a function declaration");
+    };
+    assert_eq!(name.lexeme, "b");
+    assert_eq!(params.len(), 1);
+    assert_eq!(params[0].lexeme, "x");
+    assert_eq!(body.len(), 1);
+    assert!(matches!(body[0], Stmt::Return { .. }));
+}
+
+#[test]
+fn parses_function_body_with_nested_block_statement() {
+    let mut stmts = parse_program("fun f() { { print 1; } }");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Function { name, params, body } = stmts.remove(0) else {
+        panic!("expected function declaration stmt");
+    };
+    assert_eq!(name.lexeme, "f");
+    assert!(params.is_empty());
+    assert_eq!(body.len(), 1);
+
+    let Stmt::Block { stmts: inner } = &body[0] else {
+        panic!("expected nested block stmt in function body");
+    };
+    assert_eq!(inner.len(), 1);
+    assert!(matches!(inner[0], Stmt::Print { .. }));
+}
+
+#[test]
 fn parses_var_declaration_with_initializer() {
     let mut stmts = parse_program("var a = \"hi\";");
     assert_eq!(stmts.len(), 1);
