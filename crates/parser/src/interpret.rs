@@ -7,7 +7,7 @@ use interpreter_types::{Token, TokenType};
 
 use crate::ast::{Expr, Literal, Stmt};
 use crate::env::{Env, EnvRef};
-use crate::{LoxCallable, NativeFn};
+use crate::{LoxCallable, LoxFunction, NativeFn};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -16,6 +16,7 @@ pub enum Value {
     Bool(bool),
     Nil,
     NativeFn(NativeFn),
+    ForeignFn(LoxFunction),
 }
 
 impl fmt::Display for Value {
@@ -32,6 +33,13 @@ impl fmt::Display for Value {
             Value::Bool(b) => write!(f, "{}", if *b { "true" } else { "false" }),
             Value::Nil => write!(f, "nil"),
             Value::NativeFn(native) => write!(f, "{native}"),
+            Value::ForeignFn(lox_fn) => {
+                let Stmt::Function { name, params, .. } = &lox_fn.declaration else { panic!() };
+                let params_str_vec =
+                    params.iter().map(|param| param.lexeme.clone()).collect::<Vec<String>>();
+                let params_str = params_str_vec.join(", ");
+                write!(f, "fn {}({})", name.lexeme, params_str)
+            }
         }
     }
 }
@@ -322,15 +330,12 @@ impl Interpret {
         let previous = self.env.clone();
         self.env = Rc::new(RefCell::new(Env::new(Some(previous.clone()))));
 
-        let result = (|| {
-            for stmt in stmts {
-                stmt.eval(self)?;
-            }
-            Ok(())
-        })();
+        for stmt in stmts {
+            stmt.eval(self)?;
+        }
 
         self.env = previous;
-        result
+        Ok(())
     }
 
     pub(crate) fn execute_block_with_env(
@@ -341,15 +346,12 @@ impl Interpret {
         let previous = self.env.clone();
         self.env = env;
 
-        let result = (|| {
-            for stmt in stmts {
-                stmt.eval(self)?;
-            }
-            Ok(())
-        })();
+        for stmt in stmts {
+            stmt.eval(self)?;
+        }
 
         self.env = previous;
-        result
+        Ok(())
     }
 
     pub(crate) fn with_env(&mut self, env: EnvRef) -> EnvRef {

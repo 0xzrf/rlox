@@ -13,8 +13,9 @@ pub trait LoxCallable {
     fn arity(&self) -> usize;
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct LoxFunction {
-    declaration: Stmt,
+    pub declaration: Stmt,
 }
 
 impl LoxFunction {

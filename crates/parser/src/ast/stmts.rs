@@ -8,10 +8,10 @@
 
 use interpreter_types::Token;
 
-use super::Expr;
-use crate::interpret::{Interpret, RuntimeError};
+use super::{Expr, LoxFunction};
+use crate::interpret::{Interpret, RuntimeError, Value};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Stmt {
     Expression {
         expr: Expr,
@@ -80,6 +80,11 @@ impl Stmt {
                 while Interpret::is_truthy(&interpreter.evaluate(condition)?) {
                     body.eval(interpreter)?;
                 }
+                Ok(())
+            }
+            Stmt::Function { name, params, body } => {
+                let function = Value::ForeignFn(LoxFunction::new(self.clone()));
+                interpreter.env_define(name.lexeme.clone(), Some(function));
                 Ok(())
             }
         }
