@@ -8,7 +8,7 @@
 
 use interpreter_types::Token;
 
-use super::{Expr, LoxFunction};
+use super::{Expr, Literal, LoxFunction};
 use crate::interpret::{Interpret, RuntimeError, Value};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -31,6 +31,10 @@ pub enum Stmt {
     Block {
         stmts: Vec<Stmt>,
     },
+    Return {
+        keyword: Token,
+        value: Option<Expr>,
+    },
     IfStmt {
         condition: Expr,
         then_branch: Box<Stmt>,
@@ -42,17 +46,22 @@ pub enum Stmt {
     },
 }
 
+pub enum StmtEvalType {
+    None,
+    Return(Value),
+}
+
 impl Stmt {
-    pub fn eval(&self, interpreter: &mut Interpret) -> Result<(), RuntimeError> {
+    pub fn eval(&self, interpreter: &mut Interpret) -> Result<StmtEvalType, RuntimeError> {
         match self {
             Stmt::Expression { expr } => {
                 interpreter.evaluate(expr)?;
-                Ok(())
+                Ok(StmtEvalType::None)
             }
             Stmt::Print { expr } => {
                 let value = interpreter.evaluate(expr)?;
                 println!("{value}");
-                Ok(())
+                Ok(StmtEvalType::None)
             }
             Stmt::Var { name, initializer } => {
                 let mut value = None;
@@ -61,11 +70,19 @@ impl Stmt {
                 }
 
                 interpreter.env_define(name.lexeme.clone(), value);
-                Ok(())
+                Ok(StmtEvalType::None)
             }
             Stmt::Block { stmts } => {
                 interpreter.execute_block(stmts)?;
-                Ok(())
+                Ok(StmtEvalType::None)
+            }
+            Stmt::Return { keyword: _, value } => {
+                let expr = value
+                    .clone()
+                    .and_then(|return_val| Some(interpreter.evaluate(&return_val)?))
+                    .unwrap_or(Value::Nil);
+
+                Ok(StmtEvalType::Return(expr))
             }
             Stmt::IfStmt { condition, then_branch, else_branch } => {
                 if Interpret::is_truthy(&interpreter.evaluate(condition)?) {
@@ -74,18 +91,18 @@ impl Stmt {
                     else_branch.eval(interpreter)?;
                 }
 
-                Ok(())
+                Ok(StmtEvalType::None)
             }
             Stmt::While { condition, body } => {
                 while Interpret::is_truthy(&interpreter.evaluate(condition)?) {
                     body.eval(interpreter)?;
                 }
-                Ok(())
+                Ok(StmtEvalType::None)
             }
             Stmt::Function { name, params, body } => {
                 let function = Value::ForeignFn(LoxFunction::new(self.clone()));
                 interpreter.env_define(name.lexeme.clone(), Some(function));
-                Ok(())
+                Ok(StmtEvalType::None)
             }
         }
     }

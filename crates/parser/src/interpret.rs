@@ -7,7 +7,7 @@ use interpreter_types::{Token, TokenType};
 
 use crate::ast::{Expr, Literal, Stmt};
 use crate::env::{Env, EnvRef};
-use crate::{LoxCallable, LoxFunction, NativeFn};
+use crate::{LoxCallable, LoxFunction, NativeFn, StmtEvalType};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -74,7 +74,9 @@ impl Interpret {
 
     pub fn interpret_stmts(&mut self, stmts: &[Stmt]) -> InterpretResult<()> {
         for stmt in stmts {
-            stmt.eval(self)?;
+            if let StmtEvalType::Return(return_value) = stmt.eval(self)? {
+                // do something with the return value
+            }
         }
         Ok(())
     }
@@ -133,21 +135,33 @@ impl Interpret {
                     fn_args.push(self.eval(arg)?);
                 }
 
-                let Value::NativeFn(mut native) = callee else {
-                    return Err(RuntimeError {
-                        token: paren.clone(),
-                        message: "Can only call functions and classes.".to_string(),
-                    });
-                };
+                match callee {
+                    Value::ForeignFn(forein_fn) => {
+                        if args.len() != forein_fn.arity() {
+                            return Err(RuntimeError {
+                                token: paren.clone(),
+                                message: "Invalid argument count".to_string(),
+                            });
+                        }
 
-                if args.len() != native.arity() {
-                    return Err(RuntimeError {
-                        token: paren.clone(),
-                        message: "Invalid argument count".to_string(),
-                    });
+                        forein_fn.call(self, fn_args)
+                    }
+                    Value::NativeFn(native_fn) => {
+                        if args.len() != native_fn.arity() {
+                            return Err(RuntimeError {
+                                token: paren.clone(),
+                                message: "Invalid argument count".to_string(),
+                            });
+                        }
+                        native_fn.call(self, fn_args)
+                    }
+                    _ => {
+                        return Err(RuntimeError {
+                            token: paren.clone(),
+                            message: "Can only call functions and classes.".to_string(),
+                        });
+                    }
                 }
-
-                native.call(self, fn_args)
             }
 
             Logical { left, operator, right } => {
@@ -342,16 +356,18 @@ impl Interpret {
         &mut self,
         stmts: &[Stmt],
         env: Rc<RefCell<Env>>,
-    ) -> InterpretResult<()> {
+    ) -> InterpretResult<StmtEvalType> {
         let previous = self.env.clone();
         self.env = env;
 
         for stmt in stmts {
-            stmt.eval(self)?;
+            if let StmtEvalType::Return(return_val) = stmt.eval(self)? {
+                return Ok(StmtEvalType::Return(return_val));
+            }
         }
 
         self.env = previous;
-        Ok(())
+        Ok(StmtEvalType::None)
     }
 
     pub(crate) fn with_env(&mut self, env: EnvRef) -> EnvRef {

@@ -108,6 +108,10 @@ impl<'a> Parser<'a> {
             return self.print_statment();
         }
 
+        if self.match_any(&[RETURN]) {
+            return self.return_statement();
+        }
+
         if self.match_any(&[WHILE]) {
             return self.while_stmt();
         }
@@ -121,6 +125,19 @@ impl<'a> Parser<'a> {
         }
 
         self.expression_stmt()
+    }
+
+    fn return_statement(&mut self) -> ParserResult<Stmt> {
+        let keyword = self.prev().clone();
+
+        let mut value = None;
+        if !self.check(&SEMICOLON) {
+            value = Some(self.expression()?);
+        }
+
+        self.consume(&SEMICOLON, "Expected a ; after the return statement");
+
+        Ok(Stmt::Return { keyword, value })
     }
 
     fn for_stmt(&mut self) -> ParserResult<Stmt> {
