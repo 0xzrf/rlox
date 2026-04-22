@@ -110,6 +110,48 @@ fn errors_on_function_declaration_missing_right_paren_after_params() {
 }
 
 #[test]
+fn parses_function_declaration_with_255_parameters() {
+    let params = (0..255)
+        .map(|i| format!("p{i}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let src = format!("fun many({params}) {{}}");
+
+    let mut stmts = parse_program(&src);
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Function { name, params, body } = stmts.remove(0) else {
+        panic!("expected function declaration stmt");
+    };
+
+    assert_eq!(name.lexeme, "many");
+    assert_eq!(params.len(), 255);
+    assert!(body.is_empty());
+}
+
+#[test]
+fn parses_function_body_with_for_loop_statement() {
+    let mut stmts = parse_program("fun f(n) { for (var i = 0; i < n; i = i + 1) print i; }");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Function { name, params, body } = stmts.remove(0) else {
+        panic!("expected function declaration stmt");
+    };
+
+    assert_eq!(name.lexeme, "f");
+    assert_eq!(params.len(), 1);
+    assert_eq!(params[0].lexeme, "n");
+    assert_eq!(body.len(), 1);
+
+    // `for` desugars into a while/block structure.
+    assert!(
+        matches!(body[0], Stmt::Block { .. } | Stmt::While { .. }),
+        "expected desugared for loop statement in body, got: {:?}",
+        body[0]
+    );
+}
+
+#[test]
 fn parses_var_declaration_with_initializer() {
     let mut stmts = parse_program("var a = \"hi\";");
     assert_eq!(stmts.len(), 1);
