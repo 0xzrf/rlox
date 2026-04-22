@@ -1,12 +1,13 @@
 use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use interpreter_types::{Token, TokenType};
 
-use crate::LoxCallable;
 use crate::ast::{Expr, Literal, Stmt};
 use crate::env::{Env, EnvRef};
+use crate::{LoxCallable, NativeFn};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {
@@ -14,6 +15,7 @@ pub enum Value {
     String(String),
     Bool(bool),
     Nil,
+    NativeFn(NativeFn),
 }
 
 impl fmt::Display for Value {
@@ -29,6 +31,7 @@ impl fmt::Display for Value {
             Value::String(s) => write!(f, "{s}"),
             Value::Bool(b) => write!(f, "{}", if *b { "true" } else { "false" }),
             Value::Nil => write!(f, "nil"),
+            Value::NativeFn(native) => write!(f, "{native}"),
         }
     }
 }
@@ -52,13 +55,13 @@ pub type InterpretResult<T> = Result<T, RuntimeError>;
 /// Tree-walk interpreter for expression ASTs.
 pub struct Interpret {
     env: EnvRef,
+    global: EnvRef,
 }
 
 impl Interpret {
     pub fn new() -> Self {
-        Self {
-            env: Rc::new(RefCell::new(Env::new(None))),
-        }
+        let global = Rc::new(RefCell::new(Self::define_global()));
+        Self { env: global.clone(), global }
     }
 
     pub fn interpret_stmts(&mut self, stmts: &[Stmt]) -> InterpretResult<()> {
@@ -122,7 +125,21 @@ impl Interpret {
                     fn_args.push(self.eval(arg)?);
                 }
 
-                LoxCallable::call(self, fn_args)
+                let Value::NativeFn(mut native) = callee else {
+                    return Err(RuntimeError {
+                        token: paren.clone(),
+                        message: "Can only call functions and classes.".to_string(),
+                    });
+                };
+
+                if args.len() != native.arity() {
+                    return Err(RuntimeError {
+                        token: paren.clone(),
+                        message: "Invalid argument count".to_string(),
+                    });
+                }
+
+                native.call(self, fn_args)
             }
 
             Logical { left, operator, right } => {
@@ -278,6 +295,12 @@ impl Interpret {
             })
         }
     }
+
+    fn define_global() -> Env {
+        let mut env = Env::new(None);
+        env.define("clock".to_string(), Some(Value::NativeFn(NativeFn::Clock)));
+        env
+    }
 }
 
 impl Interpret {
@@ -326,6 +349,13 @@ mod tests {
 
     fn ident(name: &str) -> Token {
         Token::new(TokenType::IDENTIFIER, 1, name.to_string(), 0, String::new())
+    }
+
+    #[test]
+    fn globals_define_clock() {
+        let mut interpreter = Interpret::new();
+        let clock = Expr::Variable { name: ident("clock") };
+        assert!(matches!(interpreter.evaluate(&clock).unwrap(), Value::NativeFn(_)));
     }
 
     #[test]
