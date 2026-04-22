@@ -34,11 +34,55 @@ impl<'a> Parser<'a> {
     }
 
     fn declaration(&mut self) -> ParserResult<Stmt> {
+        if self.match_any(&[FUN]) {
+            return self.function_declaration("function");
+        }
+
         if self.match_any(&[VAR]) {
             return self.var_declaration();
         }
 
         self.statement()
+    }
+
+    fn function_declaration(&mut self, kind: &str) -> ParserResult<Stmt> {
+        let name = self.consume(&IDENTIFIER, &format("Expected {kind} name"))?;
+
+        self.consume(&LEFT_PAREN, &format!("Expected ( during {kind} declaration"))?;
+
+        let params = Vec::new();
+
+        if !self.check(&RIGHT_PAREN) {
+            loop {
+                if params.len() > 255 {
+                    let token = &self.peek()?.1.clone();
+                    eprintln!("{}", self.error(token, "Warning: More then 255 args for function"));
+                }
+
+                params.push(self.consume(
+                    &IDENTIFIER,
+                    &format!("Expected identifier inside {kind} declaration"),
+                )?);
+
+                if self.match_any(&[COMMA]) {
+                    continue;
+                }
+
+                break;
+            }
+        }
+
+        self.consume(&RIGHT_PAREN, &format!("Expected ) during {kind} declaration"))?;
+
+        self.consume(&LEFT_BRACE, &format!("expected { before {kind} declaration"))?;
+
+        let Stmt::Block { stmts } = self.block()? else {
+            return Err(ParserError::ParseError {
+                msg: format!("Expected block after {kind} declaration"),
+            });
+        };
+
+        Ok(Stmt::Function { name, params, body: stmts })
     }
 
     fn var_declaration(&mut self) -> ParserResult<Stmt> {

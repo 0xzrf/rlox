@@ -16,6 +16,11 @@ pub enum Stmt {
     Expression {
         expr: Expr,
     },
+    Function {
+        name: Token,
+        params: Vec<Token>,
+        body: Vec<Stmt>,
+    },
     Print {
         expr: Expr,
     },
