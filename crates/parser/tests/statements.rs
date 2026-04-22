@@ -89,6 +89,27 @@ fn parses_function_body_with_nested_block_statement() {
 }
 
 #[test]
+fn errors_on_function_declaration_missing_name() {
+    let tokens = Scanner::_new("fun () {}".to_string()).scan(false).unwrap().0.get_tokens();
+    let err = Parser::new(&tokens).parse().unwrap_err();
+    assert!(
+        err.to_string().contains("Expected function name"),
+        "unexpected error message: {err}"
+    );
+}
+
+#[test]
+fn errors_on_function_declaration_missing_right_paren_after_params() {
+    let src = "fun f(a, b { return a; }";
+    let tokens = Scanner::_new(src.to_string()).scan(false).unwrap().0.get_tokens();
+    let err = Parser::new(&tokens).parse().unwrap_err();
+    assert!(
+        err.to_string().contains("Expected ) during function declaration"),
+        "unexpected error message: {err}"
+    );
+}
+
+#[test]
 fn parses_var_declaration_with_initializer() {
     let mut stmts = parse_program("var a = \"hi\";");
     assert_eq!(stmts.len(), 1);
