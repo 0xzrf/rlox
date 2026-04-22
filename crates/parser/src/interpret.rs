@@ -4,6 +4,7 @@ use std::rc::Rc;
 
 use interpreter_types::{Token, TokenType};
 
+use crate::LoxCallable;
 use crate::ast::{Expr, Literal, Stmt};
 use crate::env::{Env, EnvRef};
 
@@ -111,6 +112,17 @@ impl Interpret {
                     .assign(name.lexeme.clone(), eval.clone())
                     .map_err(|msg| RuntimeError { token: name.clone(), message: msg })?;
                 return Ok(eval);
+            }
+
+            Call { callee, paren, args } => {
+                let callee = self.eval(callee)?;
+
+                let mut fn_args = Vec::new();
+                for arg in args {
+                    fn_args.push(self.eval(arg)?);
+                }
+
+                LoxCallable::call(self, fn_args)
             }
 
             Logical { left, operator, right } => {
