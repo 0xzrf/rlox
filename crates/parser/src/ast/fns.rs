@@ -1,12 +1,60 @@
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use super::Stmt;
 use crate::Interpret;
+use crate::env::Env;
 use crate::interpret::{InterpretResult, Value};
 
 pub trait LoxCallable {
     fn call(&mut self, interpreter: &mut Interpret, args: Vec<Value>) -> InterpretResult<Value>;
 
     fn arity(&self) -> usize;
+}
+
+pub struct LoxFunction {
+    declaration: Stmt,
+}
+
+impl LoxFunction {
+    pub fn new(declaration: Stmt) -> Self {
+        let Stmt::Function { .. } = declaration else {
+            panic!("Expected a function statement for lox function"); // this is necessary to avoid calling this on an invalid statement
+        };
+
+        Self { declaration }
+    }
+}
+
+impl LoxCallable for LoxFunction {
+    fn arity(&self) -> usize {
+        let Stmt::Function { params, .. } = &self.declaration else {
+            panic!("Expected a function statement for lox function"); // this is necessary to avoid calling this on an invalid statement
+        };
+
+        params.len()
+    }
+
+    fn call(&mut self, interpreter: &mut Interpret, args: Vec<Value>) -> InterpretResult<Value> {
+        let env = Rc::new(RefCell::new(Env::new(Some(interpreter.global.clone())))); // ASK: should this really be a global?
+
+        let Stmt::Function { params, body, .. } = &self.declaration else {
+            panic!("Expected a function statement for lox function"); // this is necessary to avoid calling this on an invalid statement
+        };
+
+        if args.len() != params.len() {
+            panic!("Expected function args to be equal to args len");
+        }
+
+        for (param, arg) in params.iter().zip(args) {
+            env.borrow_mut().define(param.lexeme.clone(), Some(arg));
+        }
+
+        interpreter.execute_block_with_env(&body, env)?;
+
+        Ok(Value::Nil)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

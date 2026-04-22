@@ -46,16 +46,16 @@ impl<'a> Parser<'a> {
     }
 
     fn function_declaration(&mut self, kind: &str) -> ParserResult<Stmt> {
-        let name = self.consume(&IDENTIFIER, &format("Expected {kind} name"))?;
+        let name = self.consume(&IDENTIFIER, &format!("Expected {kind} name"))?;
 
         self.consume(&LEFT_PAREN, &format!("Expected ( during {kind} declaration"))?;
 
-        let params = Vec::new();
+        let mut params = Vec::new();
 
         if !self.check(&RIGHT_PAREN) {
             loop {
                 if params.len() > 255 {
-                    let token = &self.peek()?.1.clone();
+                    let token = &self.peek().unwrap().1.clone();
                     eprintln!("{}", self.error(token, "Warning: More then 255 args for function"));
                 }
 
@@ -74,7 +74,7 @@ impl<'a> Parser<'a> {
 
         self.consume(&RIGHT_PAREN, &format!("Expected ) during {kind} declaration"))?;
 
-        self.consume(&LEFT_BRACE, &format!("expected { before {kind} declaration"))?;
+        self.consume(&LEFT_BRACE, &format!("expected Right braces before {kind} declaration"))?;
 
         let Stmt::Block { stmts } = self.block()? else {
             return Err(ParserError::ParseError {

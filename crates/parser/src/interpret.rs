@@ -54,8 +54,8 @@ pub type InterpretResult<T> = Result<T, RuntimeError>;
 
 /// Tree-walk interpreter for expression ASTs.
 pub struct Interpret {
-    env: EnvRef,
-    global: EnvRef,
+    pub env: EnvRef,
+    pub global: EnvRef,
 }
 
 impl Interpret {
@@ -321,6 +321,25 @@ impl Interpret {
     pub(crate) fn execute_block(&mut self, stmts: &[Stmt]) -> InterpretResult<()> {
         let previous = self.env.clone();
         self.env = Rc::new(RefCell::new(Env::new(Some(previous.clone()))));
+
+        let result = (|| {
+            for stmt in stmts {
+                stmt.eval(self)?;
+            }
+            Ok(())
+        })();
+
+        self.env = previous;
+        result
+    }
+
+    pub(crate) fn execute_block_with_env(
+        &mut self,
+        stmts: &[Stmt],
+        env: Rc<RefCell<Env>>,
+    ) -> InterpretResult<()> {
+        let previous = self.env.clone();
+        self.env = env;
 
         let result = (|| {
             for stmt in stmts {
