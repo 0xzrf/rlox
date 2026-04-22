@@ -301,6 +301,35 @@ impl<'a> Parser<'a> {
         self.primary()
     }
 
+    fn call(&mut self) -> ParserResult<Expr> {
+        let mut expr = self.primary()?;
+
+        while self.match_any(&[LEFT_PAREN]) {
+            expr = self.finish_call(&expr)?;
+        }
+
+        Ok(expr)
+    }
+
+    fn finish_call(&mut self, callee: &Expr) -> ParserResult<Expr> {
+        let callee = Box::new(*callee);
+        let mut args = Vec::new();
+
+        if !self.check(&RIGHT_PAREN) {
+            loop {
+                args.push(self.expression()?);
+
+                if self.match_any(&[COMMA]) {
+                    break;
+                }
+            }
+        }
+
+        let paren = self.consume(&RIGHT_PAREN, "Expected ) to end the call")?;
+
+        Ok(Expr::Call { callee, paren, args })
+    }
+
     fn primary(&mut self) -> ParserResult<Expr> {
         if self.match_any(&[FALSE]) {
             return Ok(Expr::new_primary(Literal::False));
