@@ -115,6 +115,10 @@ impl Expr {
             Expr::Logical { left, operator, right } => {
                 parenthesize(&format!("{}", operator.lexeme), &[left, right])
             }
+            Expr::Call { callee, paren, args } => {
+                let args_str = args.join(", ");
+                format!("{callee}({args_str})")
+            }
         }
     }
 }

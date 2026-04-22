@@ -317,6 +317,12 @@ impl<'a> Parser<'a> {
 
         if !self.check(&RIGHT_PAREN) {
             loop {
+                if args.len() > 255 {
+                    return Err(
+                        self.error(self.peek().unwrap().1, "Can't have more then 255 arguments")
+                    );
+                }
+
                 args.push(self.expression()?);
 
                 if self.match_any(&[COMMA]) {
