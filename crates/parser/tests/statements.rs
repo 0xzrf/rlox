@@ -152,6 +152,43 @@ fn parses_function_body_with_for_loop_statement() {
 }
 
 #[test]
+fn parses_return_statement_without_value_in_function_body() {
+    let mut stmts = parse_program("fun f() { return; }");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Function { name, params, body } = stmts.remove(0) else {
+        panic!("expected function declaration stmt");
+    };
+    assert_eq!(name.lexeme, "f");
+    assert!(params.is_empty());
+    assert_eq!(body.len(), 1);
+
+    let Stmt::Return { value, .. } = &body[0] else {
+        panic!("expected return stmt in body");
+    };
+    assert!(value.is_none(), "expected bare return with no value");
+}
+
+#[test]
+fn parses_function_declaration_inside_block_scope() {
+    let mut stmts = parse_program("{ fun inner() { print 1; } }");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Block { stmts: inner } = stmts.remove(0) else {
+        panic!("expected outer block stmt");
+    };
+    assert_eq!(inner.len(), 1);
+
+    let Stmt::Function { name, params, body } = &inner[0] else {
+        panic!("expected function declaration inside block");
+    };
+    assert_eq!(name.lexeme, "inner");
+    assert!(params.is_empty());
+    assert_eq!(body.len(), 1);
+    assert!(matches!(body[0], Stmt::Print { .. }));
+}
+
+#[test]
 fn parses_var_declaration_with_initializer() {
     let mut stmts = parse_program("var a = \"hi\";");
     assert_eq!(stmts.len(), 1);
