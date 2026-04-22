@@ -11,7 +11,7 @@
 
 use interpreter_types::Token;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,
@@ -47,7 +47,7 @@ pub enum Expr {
     },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Literal {
     Number(String),
     String(String),
@@ -116,8 +116,12 @@ impl Expr {
                 parenthesize(&format!("{}", operator.lexeme), &[left, right])
             }
             Expr::Call { callee, paren, args } => {
-                let args_str = args.join(", ");
-                format!("{callee}({args_str})")
+                let args_str = args
+                    .iter()
+                    .map(|expr| format!("{expr:#?}"))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                format!("{callee:#?}({args_str})")
             }
         }
     }

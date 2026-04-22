@@ -312,15 +312,14 @@ impl<'a> Parser<'a> {
     }
 
     fn finish_call(&mut self, callee: &Expr) -> ParserResult<Expr> {
-        let callee = Box::new(*callee);
+        let callee = Box::new(callee.clone());
         let mut args = Vec::new();
 
         if !self.check(&RIGHT_PAREN) {
             loop {
                 if args.len() > 255 {
-                    return Err(
-                        self.error(self.peek().unwrap().1, "Can't have more then 255 arguments")
-                    );
+                    let token = self.peek().unwrap().1.clone();
+                    eprintln!("{}", self.error(&token, "Can't have more then 255 arguments"));
                 }
 
                 args.push(self.expression()?);
