@@ -298,7 +298,7 @@ impl<'a> Parser<'a> {
             return Ok(Expr::new_unary(operator, right));
         }
 
-        self.primary()
+        self.call()
     }
 
     fn call(&mut self) -> ParserResult<Expr> {
@@ -325,8 +325,9 @@ impl<'a> Parser<'a> {
                 args.push(self.expression()?);
 
                 if self.match_any(&[COMMA]) {
-                    break;
+                    continue;
                 }
+                break;
             }
         }
 
