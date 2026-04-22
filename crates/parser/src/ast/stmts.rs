@@ -8,7 +8,7 @@
 
 use interpreter_types::Token;
 
-use super::{Expr, Literal, LoxFunction};
+use super::{Expr, LoxFunction};
 use crate::interpret::{Interpret, RuntimeError, Value};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -73,29 +73,38 @@ impl Stmt {
                 Ok(StmtEvalType::None)
             }
             Stmt::Block { stmts } => {
-                interpreter.execute_block(stmts)?;
-                Ok(StmtEvalType::None)
+                interpreter.execute_block(stmts)
             }
             Stmt::Return { keyword: _, value } => {
-                let expr = value
-                    .clone()
-                    .and_then(|return_val| Some(interpreter.evaluate(&return_val)?))
-                    .unwrap_or(Value::Nil);
+                let expr = if let Some(return_val) = value {
+                    interpreter.evaluate(&return_val)?
+                } else {
+                    Value::Nil
+                };
 
                 Ok(StmtEvalType::Return(expr))
             }
             Stmt::IfStmt { condition, then_branch, else_branch } => {
                 if Interpret::is_truthy(&interpreter.evaluate(condition)?) {
-                    then_branch.eval(interpreter)?;
+                    let flow = then_branch.eval(interpreter)?;
+                    if let StmtEvalType::Return(_) = flow {
+                        return Ok(flow);
+                    }
                 } else if let Some(else_branch) = else_branch {
-                    else_branch.eval(interpreter)?;
+                    let flow = else_branch.eval(interpreter)?;
+                    if let StmtEvalType::Return(_) = flow {
+                        return Ok(flow);
+                    }
                 }
 
                 Ok(StmtEvalType::None)
             }
             Stmt::While { condition, body } => {
                 while Interpret::is_truthy(&interpreter.evaluate(condition)?) {
-                    body.eval(interpreter)?;
+                    let flow = body.eval(interpreter)?;
+                    if let StmtEvalType::Return(_) = flow {
+                        return Ok(flow);
+                    }
                 }
                 Ok(StmtEvalType::None)
             }

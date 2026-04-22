@@ -74,9 +74,7 @@ impl Interpret {
 
     pub fn interpret_stmts(&mut self, stmts: &[Stmt]) -> InterpretResult<()> {
         for stmt in stmts {
-            if let StmtEvalType::Return(return_value) = stmt.eval(self)? {
-                // do something with the return value
-            }
+            stmt.eval(self)?;
         }
         Ok(())
     }
@@ -340,16 +338,19 @@ impl Interpret {
         self.env.borrow_mut().define(name, value);
     }
 
-    pub(crate) fn execute_block(&mut self, stmts: &[Stmt]) -> InterpretResult<()> {
+    pub(crate) fn execute_block(&mut self, stmts: &[Stmt]) -> InterpretResult<StmtEvalType> {
         let previous = self.env.clone();
         self.env = Rc::new(RefCell::new(Env::new(Some(previous.clone()))));
 
         for stmt in stmts {
-            stmt.eval(self)?;
+            if let StmtEvalType::Return(return_val) = stmt.eval(self)? {
+                self.env = previous;
+                return Ok(StmtEvalType::Return(return_val));
+            }
         }
 
         self.env = previous;
-        Ok(())
+        Ok(StmtEvalType::None)
     }
 
     pub(crate) fn execute_block_with_env(
