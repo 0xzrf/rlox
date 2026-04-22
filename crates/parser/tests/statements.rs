@@ -15,6 +15,39 @@ fn interpret_program(source_code: &str) -> Interpret {
 }
 
 #[test]
+fn parses_function_declaration_with_no_params_and_empty_body() {
+    let mut stmts = parse_program("fun f() {}");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Function { name, params, body } = stmts.remove(0) else {
+        panic!("expected function declaration stmt");
+    };
+
+    assert_eq!(name.lexeme, "f");
+    assert!(params.is_empty(), "expected no params");
+    assert!(body.is_empty(), "expected empty body");
+}
+
+#[test]
+fn parses_function_declaration_with_params_and_body_statements() {
+    let mut stmts = parse_program("fun add(a, b) { print a; return b; }");
+    assert_eq!(stmts.len(), 1);
+
+    let Stmt::Function { name, params, body } = stmts.remove(0) else {
+        panic!("expected function declaration stmt");
+    };
+
+    assert_eq!(name.lexeme, "add");
+    assert_eq!(params.len(), 2);
+    assert_eq!(params[0].lexeme, "a");
+    assert_eq!(params[1].lexeme, "b");
+
+    assert_eq!(body.len(), 2);
+    assert!(matches!(body[0], Stmt::Print { .. }), "expected print stmt in body");
+    assert!(matches!(body[1], Stmt::Return { .. }), "expected return stmt in body");
+}
+
+#[test]
 fn parses_var_declaration_with_initializer() {
     let mut stmts = parse_program("var a = \"hi\";");
     assert_eq!(stmts.len(), 1);

@@ -25,6 +25,8 @@ pub mod parser_tests {
             Stmt::Print { .. }
             | Stmt::Var { .. }
             | Stmt::Block { .. }
+            | Stmt::Function { .. }
+            | Stmt::Return { .. }
             | Stmt::IfStmt { .. }
             | Stmt::While { .. } => None,
         }
@@ -59,6 +61,8 @@ pub mod parser_tests {
                 Stmt::Print { expr } => format!("(print {})", AstPrinter::print(expr)),
                 Stmt::Var { .. } => "(var ...)".to_string(),
                 Stmt::Block { .. } => "(block ...)".to_string(),
+                Stmt::Function { .. } => "(fun ...)".to_string(),
+                Stmt::Return { .. } => "(return ...)".to_string(),
                 Stmt::IfStmt { .. } => "(if ...)".to_string(),
                 Stmt::While { .. } => "(while ...)".to_string(),
             })
