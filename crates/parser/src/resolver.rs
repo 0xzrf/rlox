@@ -20,7 +20,11 @@ impl Resolver {
 
     pub fn resolve_stmt(&mut self, stmt: Stmt) {
         match &stmt {
-            Stmt::Block { stmts } => {}
+            Stmt::Block { stmts } => {
+                self.begin_scope();
+                // TODO
+                self.end_scrop();
+            }
             Stmt::Var { name, initializer } => {
                 self.declare(name);
                 if let Some(init) = initializer {
@@ -34,7 +38,28 @@ impl Resolver {
 
                 self.resolve_fn(stmt);
             }
-            _ => {}
+            Stmt::Expression { expr } => {
+                self.resolve_expr(&expr);
+            }
+            Stmt::IfStmt { condition, then_branch, else_branch } => {
+                self.resolve_expr(condition);
+                self.resolve_stmt(*then_branch.clone());
+                if let Some(else_branch) = else_branch {
+                    self.resolve_stmt(*else_branch.clone());
+                }
+            }
+            Stmt::Print { expr } => {
+                self.resolve_expr(expr);
+            }
+            Stmt::Return { keyword, value } => {
+                if let Some(return_val) = value {
+                    self.resolve_expr(return_val);
+                }
+            }
+            Stmt::While { condition, body } => {
+                self.resolve_expr(condition);
+                self.resolve_stmt(*body.clone());
+            }
         }
     }
 
@@ -63,7 +88,22 @@ impl Resolver {
         }
     }
 
-    fn resolve_fn(&mut self, stmt: Stmt) {}
+    fn resolve_fn(&mut self, stmt: Stmt) {
+        let Stmt::Function { name, params, body } = stmt else { unreachable!() };
+
+        self.begin_scope();
+
+        for param in &params {
+            self.declare(&param);
+            self.define(&param);
+        }
+
+        self.resolve_stmts(&body);
+
+        self.end_scrop();
+    }
+
+    fn resolve_stmts(&mut self, stmts: &[Stmt]) {}
 
     fn resolve_local(&mut self, expr: &Expr, name: &Token) {
         for (ix, scope) in self.scopes.iter().rev().enumerate() {
