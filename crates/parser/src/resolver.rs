@@ -44,23 +44,26 @@ impl Resolver {
                     });
                 }
 
+                self.resolve_local(expr, name);
+
+                Ok(())
+            }
+            Expr::Assign { name, value } => {
+                self.resolve_expr(value);
+                self.resolve_local(expr, name);
                 Ok(())
             }
             _ => Ok(()),
         }
     }
 
-    fn resolve_local(&mut self, expr: &Expr, name: &Token) -> ResolverResult<()> {
+    fn resolve_local(&mut self, expr: &Expr, name: &Token) {
         for (ix, scope) in self.scopes.iter().rev().enumerate() {
             if scope.contains_key(&name.lexeme) {
-                // TODO: self.interpret.resolv
-                return Ok(());
+                // TODO: self.interpret.resolve
+                return;
             }
         }
-        Err(CompileTimeError {
-            token: Default::default(),
-            message: "Assignment to undeclared value",
-        })
     }
 
     fn declare(&mut self, name: &Token) {
