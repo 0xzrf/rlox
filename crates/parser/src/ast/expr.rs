@@ -9,9 +9,10 @@
 // primary        → NUMBER | STRING | "true" | "false" | "nil"
 //                | "(" expression ")" ;
 
-use interpreter_types::Token;
+use std::hash::Hash;
 
-#[derive(Debug, Clone, PartialEq)]
+use interpreter_types::Token;
+#[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,
@@ -47,7 +48,7 @@ pub enum Expr {
     },
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Hash, Eq)]
 pub enum Literal {
     Number(String),
     String(String),

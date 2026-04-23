@@ -1,6 +1,7 @@
-use crate::TokenType;
+use std::hash::Hash;
 
-#[derive(Clone, Debug)]
+use crate::TokenType;
+#[derive(Clone, Debug, Hash, Eq)]
 pub struct Token {
     pub token_ty: TokenType,
     pub line: usize,

@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -9,67 +10,21 @@ use crate::ast::{Expr, Literal, Stmt};
 use crate::env::{Env, EnvRef};
 use crate::{LoxCallable, LoxFunction, NativeFn, StmtEvalType};
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Value {
-    Number(f64),
-    String(String),
-    Bool(bool),
-    Nil,
-    NativeFn(NativeFn),
-    ForeignFn(LoxFunction),
-}
-
-impl fmt::Display for Value {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Value::Number(n) => {
-                let mut text = n.to_string();
-                if text.ends_with(".0") {
-                    text.truncate(text.len() - 2);
-                }
-                write!(f, "{text}")
-            }
-            Value::String(s) => write!(f, "{s}"),
-            Value::Bool(b) => write!(f, "{}", if *b { "true" } else { "false" }),
-            Value::Nil => write!(f, "nil"),
-            Value::NativeFn(native) => write!(f, "{native}"),
-            Value::ForeignFn(lox_fn) => {
-                let Stmt::Function { name, params, .. } = &lox_fn.declaration else { panic!() };
-                let params_str_vec =
-                    params.iter().map(|param| param.lexeme.clone()).collect::<Vec<String>>();
-                let params_str = params_str_vec.join(", ");
-                write!(f, "fn {}({})", name.lexeme, params_str)
-            }
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct RuntimeError {
-    pub token: Token,
-    pub message: String,
-}
-
-impl fmt::Display for RuntimeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
-
-impl std::error::Error for RuntimeError {}
-
-pub type InterpretResult<T> = Result<T, RuntimeError>;
-
 /// Tree-walk interpreter for expression ASTs.
 pub struct Interpret {
     pub env: EnvRef,
     pub global: EnvRef,
+    pub locals: HashMap<Expr, usize>,
 }
 
 impl Interpret {
     pub fn new() -> Self {
         let global = Rc::new(RefCell::new(Self::define_global()));
-        Self { env: global.clone(), global }
+        Self {
+            env: global.clone(),
+            global,
+            locals: HashMap::new(),
+        }
     }
 
     pub fn interpret_stmts(&mut self, stmts: &[Stmt]) -> InterpretResult<()> {
@@ -88,6 +43,10 @@ impl Interpret {
     /// mirroring the behavior of jlox's `Interpreter.stringify()`.
     pub fn evaluate_to_string(&mut self, expr: &Expr) -> InterpretResult<String> {
         Ok(self.evaluate(expr)?.to_string())
+    }
+
+    pub fn resolve(&mut self, expr: &Expr, depth: usize) {
+        self.locals.insert(expr.clone(), depth);
     }
 
     fn eval(&mut self, expr: &Expr) -> InterpretResult<Value> {
@@ -377,6 +336,59 @@ impl Interpret {
         prev
     }
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Value {
+    Number(f64),
+    String(String),
+    Bool(bool),
+    Nil,
+    NativeFn(NativeFn),
+    ForeignFn(LoxFunction),
+}
+
+#[derive(Debug, Clone)]
+pub struct RuntimeError {
+    pub token: Token,
+    pub message: String,
+}
+
+impl fmt::Display for RuntimeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl std::error::Error for RuntimeError {}
+
+pub type InterpretResult<T> = Result<T, RuntimeError>;
+
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Value::Number(n) => {
+                let mut text = n.to_string();
+                if text.ends_with(".0") {
+                    text.truncate(text.len() - 2);
+                }
+                write!(f, "{text}")
+            }
+            Value::String(s) => write!(f, "{s}"),
+            Value::Bool(b) => write!(f, "{}", if *b { "true" } else { "false" }),
+            Value::Nil => write!(f, "nil"),
+            Value::NativeFn(native) => write!(f, "{native}"),
+            Value::ForeignFn(lox_fn) => {
+                let Stmt::Function { name, params, .. } = &lox_fn.declaration else { panic!() };
+                let params_str_vec =
+                    params.iter().map(|param| param.lexeme.clone()).collect::<Vec<String>>();
+                let params_str = params_str_vec.join(", ");
+                write!(f, "fn {}({})", name.lexeme, params_str)
+            }
+        }
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

@@ -1,4 +1,5 @@
-#[derive(Debug, PartialEq, Clone)]
+use std::hash::Hash;
+#[derive(Debug, PartialEq, Clone, Hash, Eq)]
 pub enum TokenType {
     // Single-character tokens
     LEFT_PAREN,
