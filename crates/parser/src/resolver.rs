@@ -19,14 +19,20 @@ impl Resolver {
     }
 
     pub fn resolve_stmt(&mut self, stmt: Stmt) {
-        match stmt {
+        match &stmt {
             Stmt::Block { stmts } => {}
             Stmt::Var { name, initializer } => {
-                self.declare(&name);
-                if let Some(ref init) = initializer {
+                self.declare(name);
+                if let Some(init) = initializer {
                     self.resolve_expr(init);
                 }
-                self.define(&name);
+                self.define(name);
+            }
+            Stmt::Function { name, params, body } => {
+                self.define(name);
+                self.declare(name);
+
+                self.resolve_fn(stmt);
             }
             _ => {}
         }
@@ -39,7 +45,7 @@ impl Resolver {
                     && let Some(ident_name) = current_scope.get(&name.lexeme)
                 {
                     return Err(CompileTimeError {
-                        token: name.clone,
+                        token: name.clone(),
                         message: "Cannot assign a variable to itself",
                     });
                 }
@@ -56,6 +62,8 @@ impl Resolver {
             _ => Ok(()),
         }
     }
+
+    fn resolve_fn(&mut self, stmt: Stmt) {}
 
     fn resolve_local(&mut self, expr: &Expr, name: &Token) {
         for (ix, scope) in self.scopes.iter().rev().enumerate() {
@@ -81,7 +89,7 @@ impl Resolver {
             return;
         };
 
-        if let Some(current_scope) = self.get_current_scope_borrow()
+        if let Some(current_scope) = self.get_current_scope_mut()
             && let Some(mut ident_mut) = current_scope.get_mut(&name.lexeme)
         {
             ident_mut = &mut true;
