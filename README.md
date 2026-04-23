@@ -35,26 +35,26 @@ It is **not** optimized and **not production-ready**. A serious, high-performanc
 - **blocks**: `{ ... }` (lexical scoping / shadowing)
 - **if / else**:
 
-```lox
+```javascript
 if (condition) statement;
 if (condition) statement; else statement;
 ```
 
 - **while**:
 
-```lox
+```javascript
 while (condition) statement;
 ```
 
 - **for** (desugared to `while` by the parser):
 
-```lox
+```javascript
 for (initializer; condition; increment) statement;
 ```
 
 - **functions**:
 
-```lox
+```javascript
 fun name(a, b) { 
   return a + b;
 }
