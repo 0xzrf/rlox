@@ -48,7 +48,10 @@ impl<'a> Parser<'a> {
     fn function_declaration(&mut self, kind: &str) -> ParserResult<Stmt> {
         let name = self.consume(&IDENTIFIER, &format!("Expected {kind} name"))?;
 
-        self.consume(&LEFT_PAREN, &format!("Expected ( during {kind} declaration"))?;
+        self.consume(
+            &LEFT_PAREN,
+            &format!("Expected ( during {kind} declaration"),
+        )?;
 
         let mut params = Vec::new();
 
@@ -56,7 +59,10 @@ impl<'a> Parser<'a> {
             loop {
                 if params.len() > 255 {
                     let token = &self.peek().unwrap().1.clone();
-                    eprintln!("{}", self.error(token, "Warning: More then 255 args for function"));
+                    eprintln!(
+                        "{}",
+                        self.error(token, "Warning: More then 255 args for function")
+                    );
                 }
 
                 params.push(self.consume(
@@ -72,9 +78,15 @@ impl<'a> Parser<'a> {
             }
         }
 
-        self.consume(&RIGHT_PAREN, &format!("Expected ) during {kind} declaration"))?;
+        self.consume(
+            &RIGHT_PAREN,
+            &format!("Expected ) during {kind} declaration"),
+        )?;
 
-        self.consume(&LEFT_BRACE, &format!("expected Right braces before {kind} declaration"))?;
+        self.consume(
+            &LEFT_BRACE,
+            &format!("expected Right braces before {kind} declaration"),
+        )?;
 
         let Stmt::Block { stmts } = self.block()? else {
             return Err(ParserError::ParseError {
@@ -82,7 +94,11 @@ impl<'a> Parser<'a> {
             });
         };
 
-        Ok(Stmt::Function { name, params, body: stmts })
+        Ok(Stmt::Function {
+            name,
+            params,
+            body: stmts,
+        })
     }
 
     fn var_declaration(&mut self) -> ParserResult<Stmt> {
@@ -135,7 +151,7 @@ impl<'a> Parser<'a> {
             value = Some(self.expression()?);
         }
 
-        self.consume(&SEMICOLON, "Expected a ; after the return statement");
+        self.consume(&SEMICOLON, "Expected a ; after the return statement")?;
 
         Ok(Stmt::Return { keyword, value })
     }
@@ -178,7 +194,9 @@ impl<'a> Parser<'a> {
         }
 
         if condition.is_none() {
-            condition = Some(Expr::Literal { value: Literal::True });
+            condition = Some(Expr::Literal {
+                value: Literal::True,
+            });
         }
 
         body = Stmt::While {
@@ -187,7 +205,9 @@ impl<'a> Parser<'a> {
         };
 
         if let Some(init) = initializer {
-            body = Stmt::Block { stmts: vec![init, body] }
+            body = Stmt::Block {
+                stmts: vec![init, body],
+            }
         }
 
         Ok(body)
@@ -220,7 +240,11 @@ impl<'a> Parser<'a> {
             else_branch = Some(Box::new(self.statement()?));
         }
 
-        Ok(Stmt::IfStmt { condition, then_branch, else_branch })
+        Ok(Stmt::IfStmt {
+            condition,
+            then_branch,
+            else_branch,
+        })
     }
 
     fn block(&mut self) -> ParserResult<Stmt> {
@@ -245,7 +269,6 @@ impl<'a> Parser<'a> {
     fn expression_stmt(&mut self) -> ParserResult<Stmt> {
         let value = self.expression()?;
 
-
         self.consume(&SEMICOLON, "Expected the statement to end with a semicolon")?;
 
         Ok(Stmt::Expression { expr: value })
@@ -263,7 +286,10 @@ impl<'a> Parser<'a> {
             let value = self.assignment()?;
 
             if let Expr::Variable { name } = expr {
-                return Ok(Expr::Assign { name, value: Box::new(value) });
+                return Ok(Expr::Assign {
+                    name,
+                    value: Box::new(value),
+                });
             }
             return Err(ParserError::ParseError {
                 msg: "Invalid assignment target".to_string(),
@@ -380,7 +406,10 @@ impl<'a> Parser<'a> {
             loop {
                 if args.len() > 255 {
                     let token = self.peek().unwrap().1.clone();
-                    eprintln!("{}", self.error(&token, "Can't have more then 255 arguments"));
+                    eprintln!(
+                        "{}",
+                        self.error(&token, "Can't have more then 255 arguments")
+                    );
                 }
 
                 args.push(self.expression()?);
@@ -394,7 +423,11 @@ impl<'a> Parser<'a> {
 
         let paren = self.consume(&RIGHT_PAREN, "Expected ) to end the call")?;
 
-        Ok(Expr::Call { callee, paren, args })
+        Ok(Expr::Call {
+            callee,
+            paren,
+            args,
+        })
     }
 
     fn primary(&mut self) -> ParserResult<Expr> {
@@ -406,7 +439,9 @@ impl<'a> Parser<'a> {
         }
 
         if self.match_any(&[NUMBER]) {
-            return Ok(Expr::new_primary(Literal::Number(self.prev().literal.clone())));
+            return Ok(Expr::new_primary(Literal::Number(
+                self.prev().literal.clone(),
+            )));
         }
 
         if self.match_any(&[NIL]) {
@@ -414,7 +449,9 @@ impl<'a> Parser<'a> {
         }
 
         if self.match_any(&[STRING]) {
-            return Ok(Expr::new_primary(Literal::String(self.prev().literal.clone())));
+            return Ok(Expr::new_primary(Literal::String(
+                self.prev().literal.clone(),
+            )));
         }
 
         if self.match_any(&[IDENTIFIER]) {
@@ -427,12 +464,15 @@ impl<'a> Parser<'a> {
             return Ok(Expr::new_grouping(expr));
         }
 
-        Err(ParserError::get_error(self.peek().unwrap().1, "Expected an expression"))
+        Err(ParserError::get_error(
+            self.peek().unwrap().1,
+            "Expected an expression",
+        ))
     }
 
+    #[allow(dead_code)]
     fn synchronize(&mut self) {
         self.advance();
-
 
         while !self.is_at_end() {
             if self.prev().token_ty == SEMICOLON {
@@ -497,7 +537,6 @@ impl<'a> Parser<'a> {
         self.tokens_peekable.peek()
     }
 
-
     fn prev(&mut self) -> &Token {
         let next = self
             .tokens_peekable
@@ -505,8 +544,9 @@ impl<'a> Parser<'a> {
             .map(|(ix, _)| *ix)
             .unwrap_or(self.original_tokens.len());
 
-        let prev_ix =
-            next.checked_sub(1).expect("Parser::prev() called before consuming any token");
+        let prev_ix = next
+            .checked_sub(1)
+            .expect("Parser::prev() called before consuming any token");
 
         &self.original_tokens[prev_ix]
     }
@@ -584,18 +624,28 @@ mod tests {
 
     #[test]
     fn equality_is_left_associative() {
-        assert_eq!(parse_to_ast("true == false == true"), "(== (== true false) true)");
+        assert_eq!(
+            parse_to_ast("true == false == true"),
+            "(== (== true false) true)"
+        );
     }
 
     #[test]
     fn errors_on_missing_right_paren() {
         let msg = parse_err("(1 + 2");
-        assert!(msg.contains("Expect ')' after expression"), "unexpected error message: {msg}");
+        assert!(
+            msg.contains("Expect ')' after expression"),
+            "unexpected error message: {msg}"
+        );
     }
 
     #[test]
     fn errors_on_empty_input() {
-        let tokens = Scanner::_new("".to_string()).scan(false).unwrap().0.get_tokens();
+        let tokens = Scanner::_new("".to_string())
+            .scan(false)
+            .unwrap()
+            .0
+            .get_tokens();
         let stmts = Parser::new(&tokens).parse().unwrap();
         assert!(
             stmts.is_empty(),
@@ -626,7 +676,10 @@ mod tests {
     #[test]
     fn errors_on_unexpected_right_paren() {
         let msg = parse_err(")");
-        assert!(msg.contains("Expected an expression"), "unexpected error message: {msg}");
+        assert!(
+            msg.contains("Expected an expression"),
+            "unexpected error message: {msg}"
+        );
     }
 
     #[test]
@@ -652,7 +705,10 @@ mod tests {
     #[test]
     fn errors_on_lone_unary_operator() {
         let msg = parse_err("!");
-        assert!(msg.contains("Expected an expression"), "unexpected error message: {msg}");
+        assert!(
+            msg.contains("Expected an expression"),
+            "unexpected error message: {msg}"
+        );
     }
 
     #[test]
@@ -678,7 +734,10 @@ mod tests {
     #[test]
     fn errors_on_trailing_equality_operator() {
         let msg = parse_err("true ==");
-        assert!(msg.contains("Expected an expression"), "unexpected error message: {msg}");
+        assert!(
+            msg.contains("Expected an expression"),
+            "unexpected error message: {msg}"
+        );
     }
 
     #[test]
@@ -707,6 +766,9 @@ mod tests {
     #[test]
     fn errors_on_leading_binary_operator() {
         let msg = parse_err("+ 1");
-        assert!(msg.contains("Expected an expression"), "unexpected error message: {msg}");
+        assert!(
+            msg.contains("Expected an expression"),
+            "unexpected error message: {msg}"
+        );
     }
 }

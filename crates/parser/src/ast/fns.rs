@@ -72,7 +72,7 @@ impl LoxCallable for NativeFn {
         }
     }
 
-    fn call(&self, interpreter: &mut Interpret, _args: Vec<Value>) -> InterpretResult<Value> {
+    fn call(&self, _interpreter: &mut Interpret, _args: Vec<Value>) -> InterpretResult<Value> {
         match self {
             NativeFn::Clock => {
                 let since_epoch = SystemTime::now()

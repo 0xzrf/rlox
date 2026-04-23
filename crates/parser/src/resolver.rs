@@ -43,7 +43,7 @@ impl<'a> Resolver<'a> {
                 }
                 self.define(name);
             }
-            Stmt::Function { name, params, body } => {
+            Stmt::Function { name, params: _, body: _ } => {
                 self.define(name);
                 self.declare(name)?;
 
@@ -52,7 +52,11 @@ impl<'a> Resolver<'a> {
             Stmt::Expression { expr } => {
                 self.resolve_expr(&expr)?;
             }
-            Stmt::IfStmt { condition, then_branch, else_branch } => {
+            Stmt::IfStmt {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
                 self.resolve_expr(condition)?;
                 self.resolve_stmt(then_branch)?;
                 if let Some(else_branch) = else_branch {
@@ -86,11 +90,11 @@ impl<'a> Resolver<'a> {
         match expr {
             Expr::Variable { name } => {
                 if let Some(current_scope) = self.get_current_scope_borrow()
-                    && let Some(ident_name) = current_scope.get(&name.lexeme)
+                    && matches!(current_scope.get(&name.lexeme), Some(false))
                 {
                     return Err(CompileTimeError {
                         token: name.clone(),
-                        message: "Cannot assign a variable to itself",
+                        message: "Cannot read local variable in its own initializer",
                     });
                 }
 
@@ -100,12 +104,20 @@ impl<'a> Resolver<'a> {
                 self.resolve_expr(value)?;
                 self.resolve_local(expr, name);
             }
-            Expr::Binary { left, operator, right } => {
+            Expr::Binary {
+                left,
+                operator,
+                right,
+            } => {
                 let _ = operator;
                 self.resolve_expr(left)?;
                 self.resolve_expr(right)?;
             }
-            Expr::Call { callee, paren, args } => {
+            Expr::Call {
+                callee,
+                paren,
+                args,
+            } => {
                 let _ = paren;
                 self.resolve_expr(callee)?;
                 for arg in args {
@@ -115,8 +127,12 @@ impl<'a> Resolver<'a> {
             Expr::Grouping { expression } => {
                 self.resolve_expr(expression)?;
             }
-            Expr::Literal { value } => {}
-            Expr::Logical { left, operator, right } => {
+            Expr::Literal { value: _ } => {}
+            Expr::Logical {
+                left,
+                operator,
+                right,
+            } => {
                 let _ = operator;
                 self.resolve_expr(left)?;
                 self.resolve_expr(right)?;
@@ -131,7 +147,9 @@ impl<'a> Resolver<'a> {
     }
 
     fn resolve_fn(&mut self, stmt: &Stmt, fn_type: FunctionType) -> ResolverResult<()> {
-        let Stmt::Function { name, params, body } = stmt else { unreachable!() };
+        let Stmt::Function { name, params, body } = stmt else {
+            unreachable!()
+        };
         let _ = name;
         let enclosing_fn = self.current_fn;
         self.current_fn = fn_type;

@@ -72,9 +72,7 @@ impl Stmt {
                 interpreter.env_define(name.lexeme.clone(), value);
                 Ok(StmtEvalType::None)
             }
-            Stmt::Block { stmts } => {
-                interpreter.execute_block(stmts)
-            }
+            Stmt::Block { stmts } => interpreter.execute_block(stmts),
             Stmt::Return { keyword: _, value } => {
                 let expr = if let Some(return_val) = value {
                     interpreter.evaluate(&return_val)?
@@ -84,7 +82,11 @@ impl Stmt {
 
                 Ok(StmtEvalType::Return(expr))
             }
-            Stmt::IfStmt { condition, then_branch, else_branch } => {
+            Stmt::IfStmt {
+                condition,
+                then_branch,
+                else_branch,
+            } => {
                 if Interpret::is_truthy(&interpreter.evaluate(condition)?) {
                     let flow = then_branch.eval(interpreter)?;
                     if let StmtEvalType::Return(_) = flow {
@@ -108,7 +110,11 @@ impl Stmt {
                 }
                 Ok(StmtEvalType::None)
             }
-            Stmt::Function { name, params, body } => {
+            Stmt::Function {
+                name,
+                params: _,
+                body: _,
+            } => {
                 let function = Value::ForeignFn(LoxFunction::new(self.clone()));
                 interpreter.env_define(name.lexeme.clone(), Some(function));
                 Ok(StmtEvalType::None)

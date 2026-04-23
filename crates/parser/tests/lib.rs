@@ -3,12 +3,14 @@ pub mod parser_tests {
     use parser::{AstPrinter, Expr, Parser, ParserResult, Stmt};
     use scanner::Scanner;
 
+    #[allow(dead_code)]
     fn get_parse_result(source_code: &str) -> ParserResult<Vec<Stmt>> {
         let tokens = Scanner::_new(source_code.to_string()).scan(false).unwrap().0.get_tokens();
 
         Parser::new(&tokens).parse()
     }
 
+    #[allow(dead_code)]
     fn parse_single_expr_stmt(source_code: &str) -> Option<Expr> {
         let mut src = source_code.trim().to_string();
         if !src.ends_with(';') {
@@ -32,6 +34,7 @@ pub mod parser_tests {
         }
     }
 
+    #[allow(dead_code)]
     fn parse_code_and_return_ast(source_code: &str) -> Option<String> {
         let parsed_expr = parse_single_expr_stmt(source_code)?;
 

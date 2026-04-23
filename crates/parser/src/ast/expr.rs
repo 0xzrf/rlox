@@ -116,7 +116,7 @@ impl Expr {
             Expr::Logical { left, operator, right } => {
                 parenthesize(&format!("{}", operator.lexeme), &[left, right])
             }
-            Expr::Call { callee, paren, args } => {
+            Expr::Call { callee, paren: _, args } => {
                 let args_str = args
                     .iter()
                     .map(|expr| format!("{expr:#?}"))

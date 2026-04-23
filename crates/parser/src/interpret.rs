@@ -74,18 +74,22 @@ impl Interpret {
 
     fn lookup_variable(&self, name: &Token, expr: &Expr) -> InterpretResult<Value> {
         let Some(distance) = self.locals.get(expr) else {
-            return self.env.borrow().get_owned(&name.lexeme).ok_or(RuntimeError {
-                token: name.clone(),
-                message: format!("Undefined variable '{}'.", name.lexeme),
-            });
+            return self
+                .env
+                .borrow()
+                .get_owned(&name.lexeme)
+                .ok_or(RuntimeError {
+                    token: name.clone(),
+                    message: format!("Undefined variable '{}'.", name.lexeme),
+                });
         };
         self.env_ancestor(*distance)
             .borrow()
             .get_owned(&name.lexeme)
             .ok_or(RuntimeError {
-            token: name.clone(),
-            message: format!("Undefined variable '{}'.", name.lexeme),
-        })
+                token: name.clone(),
+                message: format!("Undefined variable '{}'.", name.lexeme),
+            })
     }
 
     fn eval(&mut self, expr: &Expr) -> InterpretResult<Value> {
@@ -122,18 +126,28 @@ impl Interpret {
                     target
                         .borrow_mut()
                         .assign(name.lexeme.clone(), eval.clone())
-                        .map_err(|message| RuntimeError { token: name.clone(), message })?;
+                        .map_err(|message| RuntimeError {
+                            token: name.clone(),
+                            message,
+                        })?;
                 } else {
                     self.env
                         .borrow_mut()
                         .assign(name.lexeme.clone(), eval.clone())
-                        .map_err(|message| RuntimeError { token: name.clone(), message })?;
+                        .map_err(|message| RuntimeError {
+                            token: name.clone(),
+                            message,
+                        })?;
                 }
 
                 return Ok(eval);
             }
 
-            Call { callee, paren, args } => {
+            Call {
+                callee,
+                paren,
+                args,
+            } => {
                 let callee = self.eval(callee)?;
 
                 let mut fn_args = Vec::new();
@@ -170,7 +184,11 @@ impl Interpret {
                 }
             }
 
-            Logical { left, operator, right } => {
+            Logical {
+                left,
+                operator,
+                right,
+            } => {
                 let left = self.eval(left)?;
                 let mut return_left = false;
 
@@ -184,10 +202,18 @@ impl Interpret {
                     }
                 }
 
-                if return_left { Ok(left) } else { self.eval(right) }
+                if return_left {
+                    Ok(left)
+                } else {
+                    self.eval(right)
+                }
             }
 
-            Binary { left, operator, right } => {
+            Binary {
+                left,
+                operator,
+                right,
+            } => {
                 let left_val = self.eval(left)?;
                 let right_val = self.eval(right)?;
 
@@ -272,7 +298,9 @@ impl Interpret {
     fn literal_to_value(lit: &Literal) -> Value {
         match lit {
             Literal::Number(s) => {
-                let n = s.parse::<f64>().expect("scanner should only produce valid numbers");
+                let n = s
+                    .parse::<f64>()
+                    .expect("scanner should only produce valid numbers");
                 Value::Number(n)
             }
             Literal::String(s) => Value::String(s.clone()),
@@ -368,12 +396,6 @@ impl Interpret {
         self.env = previous;
         Ok(StmtEvalType::None)
     }
-
-    pub(crate) fn with_env(&mut self, env: EnvRef) -> EnvRef {
-        let prev = self.env.clone();
-        self.env = env;
-        prev
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -402,7 +424,6 @@ impl std::error::Error for RuntimeError {}
 
 pub type InterpretResult<T> = Result<T, RuntimeError>;
 
-
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -418,16 +439,19 @@ impl fmt::Display for Value {
             Value::Nil => write!(f, "nil"),
             Value::NativeFn(native) => write!(f, "{native}"),
             Value::ForeignFn(lox_fn) => {
-                let Stmt::Function { name, params, .. } = &lox_fn.declaration else { panic!() };
-                let params_str_vec =
-                    params.iter().map(|param| param.lexeme.clone()).collect::<Vec<String>>();
+                let Stmt::Function { name, params, .. } = &lox_fn.declaration else {
+                    panic!()
+                };
+                let params_str_vec = params
+                    .iter()
+                    .map(|param| param.lexeme.clone())
+                    .collect::<Vec<String>>();
                 let params_str = params_str_vec.join(", ");
                 write!(f, "fn {}({})", name.lexeme, params_str)
             }
         }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -443,8 +467,13 @@ mod tests {
     #[test]
     fn globals_define_clock() {
         let mut interpreter = Interpret::new();
-        let clock = Expr::Variable { name: ident("clock") };
-        assert!(matches!(interpreter.evaluate(&clock).unwrap(), Value::NativeFn(_)));
+        let clock = Expr::Variable {
+            name: ident("clock"),
+        };
+        assert!(matches!(
+            interpreter.evaluate(&clock).unwrap(),
+            Value::NativeFn(_)
+        ));
     }
 
     #[test]
@@ -497,10 +526,17 @@ mod tests {
     #[test]
     fn reading_undefined_variable_errors() {
         let mut interpreter = Interpret::new();
-        let expr = Expr::Variable { name: ident("missing") };
+        let expr = Expr::Variable {
+            name: ident("missing"),
+        };
 
-        let err = interpreter.evaluate(&expr).expect_err("expected undefined variable to error");
-        assert!(err.message.contains("Undefined variable 'missing'"), "got: {err}");
+        let err = interpreter
+            .evaluate(&expr)
+            .expect_err("expected undefined variable to error");
+        assert!(
+            err.message.contains("Undefined variable 'missing'"),
+            "got: {err}"
+        );
     }
 
     #[test]
@@ -513,8 +549,13 @@ mod tests {
             }),
         };
 
-        let err = interpreter.evaluate(&expr).expect_err("expected undefined assignment to error");
-        assert!(err.message.contains("Undefined variable 'missing'"), "got: {err}");
+        let err = interpreter
+            .evaluate(&expr)
+            .expect_err("expected undefined assignment to error");
+        assert!(
+            err.message.contains("Undefined variable 'missing'"),
+            "got: {err}"
+        );
     }
 
     #[test]
@@ -530,7 +571,10 @@ mod tests {
             }),
         };
 
-        assert_eq!(interpreter.evaluate(&expr).unwrap(), Value::String("hello world".to_string()));
+        assert_eq!(
+            interpreter.evaluate(&expr).unwrap(),
+            Value::String("hello world".to_string())
+        );
     }
 
     #[test]
@@ -557,7 +601,10 @@ mod tests {
         interpreter.execute_block(&block).unwrap();
 
         let a = Expr::Variable { name: ident("a") };
-        assert!(interpreter.evaluate(&a).is_err(), "expected a to be out of scope");
+        assert!(
+            interpreter.evaluate(&a).is_err(),
+            "expected a to be out of scope"
+        );
     }
 
     #[test]
@@ -606,7 +653,10 @@ mod tests {
         interpreter.interpret_stmts(&program).unwrap();
 
         let a = Expr::Variable { name: ident("a") };
-        assert_eq!(interpreter.evaluate(&a).unwrap(), Value::String("global".to_string()));
+        assert_eq!(
+            interpreter.evaluate(&a).unwrap(),
+            Value::String("global".to_string())
+        );
     }
 
     #[test]
@@ -718,7 +768,6 @@ mod tests {
         assert_eq!(interpreter.evaluate(&a).unwrap(), Value::Number(1.0));
     }
 }
-
 
 // #[cfg(test)]
 // mod interpret_tests {
