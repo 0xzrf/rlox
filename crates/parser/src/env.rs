@@ -50,6 +50,33 @@ impl Env {
         self.ancestor(distance).borrow().get_owned(name)
     }
 
+    pub fn assigne_at(&mut self, distance: usize, name: String, value: Value) {
+        self.ancestor_mut(distance).assign(name, value);
+    }
+
+    pub fn ancestor_mut(&mut self, distance: usize) -> &mut Env {
+        let mut env: *mut Env = self;
+        for _ in 0..distance {
+            // NOTE: This requires the enclosing `Rc<RefCell<Env>>` to be uniquely owned
+            // at the time of mutation, otherwise we can't soundly produce an `&mut Env`.
+            //
+            // If you want this to work with shared environments (the common case),
+            // change the API to return an `EnvRef` (or `RefMut<Env>`) instead of `&mut Env`.
+            env = unsafe {
+                let enclosing_rc: &mut Rc<RefCell<Env>> = (*env)
+                    .enclosing
+                    .as_mut()
+                    .expect("missing enclosing environment while walking ancestors");
+
+                let enclosing_cell: &mut RefCell<Env> = Rc::get_mut(enclosing_rc)
+                    .expect("cannot get mutable ancestor through shared Rc; use EnvRef-based API");
+
+                enclosing_cell.get_mut()
+            };
+        }
+        unsafe { &mut *env }
+    }
+
     fn ancestor(&self, distance: usize) -> Rc<RefCell<Self>> {
         let mut env = Rc::new(RefCell::new(self.clone()));
         for _ in 0..distance {

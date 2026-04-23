@@ -8,7 +8,7 @@ use interpreter_types::{Token, TokenType};
 
 use crate::ast::{Expr, Literal, Stmt};
 use crate::env::{Env, EnvRef};
-use crate::{LoxCallable, LoxFunction, NativeFn, StmtEvalType};
+use crate::{LoxCallable, LoxFunction, NativeFn, Resolver, StmtEvalType};
 
 /// Tree-walk interpreter for expression ASTs.
 pub struct Interpret {
@@ -28,6 +28,15 @@ impl Interpret {
     }
 
     pub fn interpret_stmts(&mut self, stmts: &[Stmt]) -> InterpretResult<()> {
+        let mut resolver = Resolver::new(self);
+        for stmt in stmts {
+            if let Err(e) = resolver.resolve_stmt(stmt) {
+                return Err(RuntimeError {
+                    token: e.token,
+                    message: format!("CompileTimeError occured: {}", e.message),
+                });
+            };
+        }
         for stmt in stmts {
             stmt.eval(self)?;
         }
@@ -90,10 +99,13 @@ impl Interpret {
 
             Assign { name, value } => {
                 let eval = self.eval(value)?;
-                self.env
-                    .borrow_mut()
-                    .assign(name.lexeme.clone(), eval.clone())
-                    .map_err(|msg| RuntimeError { token: name.clone(), message: msg })?;
+
+                if let Some(distance) = self.locals.get(expr) {
+                    self.env.borrow_mut().assigne_at(*distance, name.lexeme.clone(), eval.clone());
+                } else {
+                    self.global.borrow_mut().assign(name.lexeme.clone(), eval.clone());
+                }
+
                 return Ok(eval);
             }
 

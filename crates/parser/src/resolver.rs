@@ -5,24 +5,35 @@ use interpreter_types::Token;
 use crate::errors::CompileTimeError;
 use crate::{Expr, Interpret, Stmt};
 
-pub struct Resolver {
-    interpret: Interpret,
+pub struct Resolver<'a> {
+    interpret: &'a mut Interpret,
     scopes: Vec<HashMap<String, bool>>,
+    current_fn: FunctionType,
 }
 
 pub type ResolverResult<T> = Result<T, CompileTimeError>;
+#[derive(Copy, PartialEq, Clone)]
+pub enum FunctionType {
+    None,
+    Function,
+}
 
-
-impl Resolver {
-    pub fn new(interpret: Interpret) -> Self {
-        Self { interpret, scopes: vec![] }
+impl<'a> Resolver<'a> {
+    pub fn new(interpret: &'a mut Interpret) -> Self {
+        Self {
+            interpret,
+            scopes: vec![],
+            current_fn: FunctionType::None,
+        }
     }
 
-    pub fn resolve_stmt(&mut self, stmt: &Stmt) {
+    pub fn resolve_stmt(&mut self, stmt: &Stmt) -> ResolverResult<()> {
         match stmt {
             Stmt::Block { stmts } => {
                 self.begin_scope();
-                // TODO
+                for stmt in stmts {
+                    self.resolve_stmt(stmt);
+                }
                 self.end_scrop();
             }
             Stmt::Var { name, initializer } => {
@@ -36,7 +47,7 @@ impl Resolver {
                 self.define(name);
                 self.declare(name);
 
-                self.resolve_fn(stmt);
+                self.resolve_fn(stmt, FunctionType::Function);
             }
             Stmt::Expression { expr } => {
                 self.resolve_expr(&expr);
@@ -52,6 +63,13 @@ impl Resolver {
                 self.resolve_expr(expr);
             }
             Stmt::Return { keyword, value } => {
+                if self.current_fn == FunctionType::None {
+                    return Err(CompileTimeError {
+                        token: keyword.clone(),
+                        message: "Cannot return outside a function",
+                    });
+                }
+
                 if let Some(return_val) = value {
                     self.resolve_expr(return_val);
                 }
@@ -61,6 +79,7 @@ impl Resolver {
                 self.resolve_stmt(body);
             }
         }
+        Ok(())
     }
 
     fn resolve_expr(&mut self, expr: &Expr) -> ResolverResult<()> {
@@ -106,9 +125,10 @@ impl Resolver {
         Ok(())
     }
 
-    fn resolve_fn(&mut self, stmt: &Stmt) {
+    fn resolve_fn(&mut self, stmt: &Stmt, fn_type: FunctionType) {
         let Stmt::Function { name, params, body } = stmt else { unreachable!() };
-
+        let enclosing_fn = self.current_fn;
+        self.current_fn = fn_type;
         self.begin_scope();
 
         for param in params {
@@ -119,6 +139,8 @@ impl Resolver {
         self.resolve_stmts(&body);
 
         self.end_scrop();
+
+        self.current_fn = enclosing_fn;
     }
 
     fn resolve_stmts(&mut self, stmts: &[Stmt]) {}
@@ -132,14 +154,22 @@ impl Resolver {
         }
     }
 
-    fn declare(&mut self, name: &Token) {
+    fn declare(&mut self, name: &Token) -> ResolverResult<()> {
         if self.is_scope_empty() {
-            return;
+            return Ok(());
         };
 
         if let Some(current_scope) = self.get_current_scope_mut() {
-            current_scope.insert(name.lexeme.clone(), false);
+            let name_clone = name.lexeme.clone();
+            if current_scope.get(&name_clone).is_some() {
+                return Err(CompileTimeError {
+                    token: name.clone(),
+                    message: "Cannot redeclare a variable",
+                });
+            }
+            current_scope.insert(name_clone, false);
         }
+        Ok(())
     }
 
     fn define(&mut self, name: &Token) {
