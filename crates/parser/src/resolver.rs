@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use interpreter_types::Token;
+
 use crate::{Interpret, Stmt};
 
 pub struct Resolver {
@@ -13,7 +15,23 @@ impl Resolver {
         Self { interpret, scopes: vec![] }
     }
 
-    pub fn resolve_stmt(&mut self, stmt: Stmt) {}
+    pub fn resolve_stmt(&mut self, stmt: Stmt) {
+        match stmt {
+            Stmt::Block { stmts } => {}
+            Stmt::Var { name, initializer } => {}
+            _ => {}
+        }
+    }
+
+    fn declare(&mut self, name: &Token) {
+        if self.is_scope_empty() {
+            return;
+        };
+
+        if let Some(current_scope) = self.get_current_scope() {
+            current_scope.insert(name.lexeme.clone(), false);
+        }
+    }
 
     fn begin_scope(&mut self) {
         self.scopes.push(HashMap::new())
@@ -21,5 +39,13 @@ impl Resolver {
 
     fn end_scrop(&mut self) {
         self.scopes.pop();
+    }
+
+    fn is_scope_empty(&self) -> bool {
+        self.scopes.is_empty()
+    }
+
+    fn get_current_scope(&mut self) -> Option<&mut HashMap<String, bool>> {
+        self.scopes.last_mut()
     }
 }
