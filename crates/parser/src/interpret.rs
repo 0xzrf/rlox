@@ -29,17 +29,20 @@ impl Interpret {
 
     pub fn interpret_stmts(&mut self, stmts: &[Stmt]) -> InterpretResult<()> {
         let mut resolver = Resolver::new(self);
+        let mut resolver_err = (None, false);
         for stmt in stmts {
             if let Err(e) = resolver.resolve_stmt(stmt) {
-                return Err(RuntimeError {
-                    token: e.token,
-                    message: format!("CompileTimeError occured: {}", e.message),
-                });
+                eprintln!("CompileTimeError occured: {}", e.message);
+                resolver_err = (Some(e), true);
             };
         }
-        for stmt in stmts {
-            stmt.eval(self)?;
+
+        if !resolver_err.1 {
+            for stmt in stmts {
+                stmt.eval(self)?;
+            }
         }
+
         Ok(())
     }
 
