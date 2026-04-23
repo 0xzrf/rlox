@@ -49,6 +49,19 @@ impl Interpret {
         self.locals.insert(expr.clone(), depth);
     }
 
+    fn lookup_variable(&self, name: &Token, expr: &Expr) -> InterpretResult<Value> {
+        let Some(distance) = self.locals.get(expr) else {
+            return self.global.borrow().get_owned(&name.lexeme).ok_or(RuntimeError {
+                token: name.clone(),
+                message: format!("Undefined variable '{}'.", name.lexeme),
+            });
+        };
+        self.env.borrow().get_at(*distance, &name.lexeme).ok_or(RuntimeError {
+            token: name.clone(),
+            message: format!("Undefined variable '{}'.", name.lexeme),
+        })
+    }
+
     fn eval(&mut self, expr: &Expr) -> InterpretResult<Value> {
         use Expr::*;
 

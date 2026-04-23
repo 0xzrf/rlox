@@ -6,6 +6,7 @@ use crate::interpret::Value;
 
 pub type EnvRef = Rc<RefCell<Env>>;
 
+#[derive(Clone)]
 pub struct Env {
     values: HashMap<String, Value>,
     enclosing: Option<EnvRef>,
@@ -43,6 +44,20 @@ impl Env {
         }
 
         Err(format!("Undefined variable '{}'.", name))
+    }
+
+    pub fn get_at(&self, distance: usize, name: &str) -> Option<Value> {
+        self.ancestor(distance).borrow().get_owned(name)
+    }
+
+    fn ancestor(&self, distance: usize) -> Rc<RefCell<Self>> {
+        let mut env = Rc::new(RefCell::new(self.clone()));
+        for _ in 0..distance {
+            let enclosing = self.enclosing.clone().unwrap();
+            env = enclosing;
+        }
+
+        env
     }
 }
 
