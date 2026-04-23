@@ -10,3 +10,6 @@ pub mod interpret;
 pub use interpret::Interpret;
 
 mod env;
+
+mod resolver;
+pub use resolver::{FunctionType, Resolver, ResolverError, ResolverResult, VarUseKey};
