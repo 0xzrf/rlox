@@ -18,8 +18,8 @@ impl Resolver {
         Self { interpret, scopes: vec![] }
     }
 
-    pub fn resolve_stmt(&mut self, stmt: Stmt) {
-        match &stmt {
+    pub fn resolve_stmt(&mut self, stmt: &Stmt) {
+        match stmt {
             Stmt::Block { stmts } => {
                 self.begin_scope();
                 // TODO
@@ -43,9 +43,9 @@ impl Resolver {
             }
             Stmt::IfStmt { condition, then_branch, else_branch } => {
                 self.resolve_expr(condition);
-                self.resolve_stmt(*then_branch.clone());
+                self.resolve_stmt(then_branch);
                 if let Some(else_branch) = else_branch {
-                    self.resolve_stmt(*else_branch.clone());
+                    self.resolve_stmt(else_branch);
                 }
             }
             Stmt::Print { expr } => {
@@ -58,7 +58,7 @@ impl Resolver {
             }
             Stmt::While { condition, body } => {
                 self.resolve_expr(condition);
-                self.resolve_stmt(*body.clone());
+                self.resolve_stmt(body);
             }
         }
     }
@@ -76,26 +76,44 @@ impl Resolver {
                 }
 
                 self.resolve_local(expr, name);
-
-                Ok(())
             }
             Expr::Assign { name, value } => {
                 self.resolve_expr(value);
                 self.resolve_local(expr, name);
-                Ok(())
             }
-            _ => Ok(()),
+            Expr::Binary { left, operator, right } => {
+                self.resolve_expr(&left);
+            }
+            Expr::Call { callee, paren, args } => {
+                self.resolve_expr(&callee);
+                for arg in args {
+                    self.resolve_expr(arg);
+                }
+            }
+            Expr::Grouping { expression } => {
+                self.resolve_expr(&expr);
+            }
+            Expr::Literal { value } => {}
+            Expr::Logical { left, operator, right } => {
+                self.resolve_expr(&left);
+                self.resolve_expr(&right);
+            }
+            Expr::Unary { operator, right } => {
+                self.resolve_expr(&right);
+            }
         }
+
+        Ok(())
     }
 
-    fn resolve_fn(&mut self, stmt: Stmt) {
+    fn resolve_fn(&mut self, stmt: &Stmt) {
         let Stmt::Function { name, params, body } = stmt else { unreachable!() };
 
         self.begin_scope();
 
-        for param in &params {
-            self.declare(&param);
-            self.define(&param);
+        for param in params {
+            self.declare(param);
+            self.define(param);
         }
 
         self.resolve_stmts(&body);
