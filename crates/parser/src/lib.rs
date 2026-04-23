@@ -12,4 +12,7 @@ pub use interpret::Interpret;
 mod env;
 
 mod resolver;
-pub use resolver::{FunctionType, Resolver, ResolverError, ResolverResult, VarUseKey};
+pub use resolver::Resolver;
+
+mod errors;
+use errors::*;

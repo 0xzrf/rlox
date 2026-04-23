@@ -38,7 +38,7 @@ impl LoxCallable for LoxFunction {
     }
 
     fn call(&self, interpreter: &mut Interpret, args: Vec<Value>) -> InterpretResult<Value> {
-        let env = Rc::new(RefCell::new(Env::new(Some(interpreter.global.clone())))); // ASK: should this really be a global?
+        let env = Rc::new(RefCell::new(Env::new(Some(interpreter.env.clone())))); // ASK: should this really be a global?
 
         let Stmt::Function { params, body, .. } = &self.declaration else {
             panic!("Expected a function statement for lox function"); // this is necessary to avoid calling this on an invalid statement
