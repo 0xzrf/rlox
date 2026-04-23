@@ -15,4 +15,4 @@ mod resolver;
 pub use resolver::Resolver;
 
 mod errors;
-use errors::*;
+// (intentionally no `use errors::*;` here; errors are accessed via their module paths)

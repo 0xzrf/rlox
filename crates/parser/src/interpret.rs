@@ -2,7 +2,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use interpreter_types::{Token, TokenType};
 
@@ -61,14 +60,29 @@ impl Interpret {
         self.locals.insert(expr.clone(), depth);
     }
 
+    fn env_ancestor(&self, distance: usize) -> EnvRef {
+        let mut env = self.env.clone();
+        for _ in 0..distance {
+            let next = env
+                .borrow()
+                .enclosing()
+                .expect("resolver produced invalid env distance");
+            env = next;
+        }
+        env
+    }
+
     fn lookup_variable(&self, name: &Token, expr: &Expr) -> InterpretResult<Value> {
         let Some(distance) = self.locals.get(expr) else {
-            return self.global.borrow().get_owned(&name.lexeme).ok_or(RuntimeError {
+            return self.env.borrow().get_owned(&name.lexeme).ok_or(RuntimeError {
                 token: name.clone(),
                 message: format!("Undefined variable '{}'.", name.lexeme),
             });
         };
-        self.env.borrow().get_at(*distance, &name.lexeme).ok_or(RuntimeError {
+        self.env_ancestor(*distance)
+            .borrow()
+            .get_owned(&name.lexeme)
+            .ok_or(RuntimeError {
             token: name.clone(),
             message: format!("Undefined variable '{}'.", name.lexeme),
         })
@@ -98,15 +112,22 @@ impl Interpret {
                 }
             }
 
-            Variable { name } => self.get_variable(name),
+            Variable { name } => self.lookup_variable(name, expr),
 
             Assign { name, value } => {
                 let eval = self.eval(value)?;
 
                 if let Some(distance) = self.locals.get(expr) {
-                    self.env.borrow_mut().assigne_at(*distance, name.lexeme.clone(), eval.clone());
+                    let target = self.env_ancestor(*distance);
+                    target
+                        .borrow_mut()
+                        .assign(name.lexeme.clone(), eval.clone())
+                        .map_err(|message| RuntimeError { token: name.clone(), message })?;
                 } else {
-                    self.global.borrow_mut().assign(name.lexeme.clone(), eval.clone());
+                    self.env
+                        .borrow_mut()
+                        .assign(name.lexeme.clone(), eval.clone())
+                        .map_err(|message| RuntimeError { token: name.clone(), message })?;
                 }
 
                 return Ok(eval);
@@ -311,16 +332,6 @@ impl Interpret {
 }
 
 impl Interpret {
-    fn get_variable(&mut self, name: &Token) -> InterpretResult<Value> {
-        let Some(val) = self.env.borrow().get_owned(&name.lexeme) else {
-            return Err(RuntimeError {
-                token: name.clone(),
-                message: format!("Undefined variable '{}'.", name.lexeme),
-            });
-        };
-        Ok(val)
-    }
-
     pub(crate) fn env_define(&mut self, name: String, value: Option<Value>) {
         self.env.borrow_mut().define(name, value);
     }

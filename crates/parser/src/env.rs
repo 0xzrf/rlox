@@ -18,6 +18,10 @@ impl Env {
         Self { values: HashMap::new(), enclosing }
     }
 
+    pub fn enclosing(&self) -> Option<EnvRef> {
+        self.enclosing.clone()
+    }
+
     pub fn get_owned(&self, name: &str) -> Option<Value> {
         if let Some(val) = self.values.get(name) {
             return Some(val.clone());
@@ -46,46 +50,9 @@ impl Env {
         Err(format!("Undefined variable '{}'.", name))
     }
 
-    pub fn get_at(&self, distance: usize, name: &str) -> Option<Value> {
-        self.ancestor(distance).borrow().get_owned(name)
-    }
-
-    pub fn assigne_at(&mut self, distance: usize, name: String, value: Value) {
-        self.ancestor_mut(distance).assign(name, value);
-    }
-
-    pub fn ancestor_mut(&mut self, distance: usize) -> &mut Env {
-        let mut env: *mut Env = self;
-        for _ in 0..distance {
-            // NOTE: This requires the enclosing `Rc<RefCell<Env>>` to be uniquely owned
-            // at the time of mutation, otherwise we can't soundly produce an `&mut Env`.
-            //
-            // If you want this to work with shared environments (the common case),
-            // change the API to return an `EnvRef` (or `RefMut<Env>`) instead of `&mut Env`.
-            env = unsafe {
-                let enclosing_rc: &mut Rc<RefCell<Env>> = (*env)
-                    .enclosing
-                    .as_mut()
-                    .expect("missing enclosing environment while walking ancestors");
-
-                let enclosing_cell: &mut RefCell<Env> = Rc::get_mut(enclosing_rc)
-                    .expect("cannot get mutable ancestor through shared Rc; use EnvRef-based API");
-
-                enclosing_cell.get_mut()
-            };
-        }
-        unsafe { &mut *env }
-    }
-
-    fn ancestor(&self, distance: usize) -> Rc<RefCell<Self>> {
-        let mut env = Rc::new(RefCell::new(self.clone()));
-        for _ in 0..distance {
-            let enclosing = self.enclosing.clone().unwrap();
-            env = enclosing;
-        }
-
-        env
-    }
+    // NOTE: we intentionally avoid `get_at` / `assign_at` helpers here for now.
+    // The interpreter walks the `EnvRef` chain directly to avoid cloning `Env`s
+    // or relying on `Rc::get_mut()` (which usually fails once environments are shared).
 }
 
 #[cfg(test)]

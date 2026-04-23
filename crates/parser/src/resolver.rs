@@ -32,35 +32,35 @@ impl<'a> Resolver<'a> {
             Stmt::Block { stmts } => {
                 self.begin_scope();
                 for stmt in stmts {
-                    self.resolve_stmt(stmt);
+                    self.resolve_stmt(stmt)?;
                 }
                 self.end_scrop();
             }
             Stmt::Var { name, initializer } => {
-                self.declare(name);
+                self.declare(name)?;
                 if let Some(init) = initializer {
-                    self.resolve_expr(init);
+                    self.resolve_expr(init)?;
                 }
                 self.define(name);
             }
             Stmt::Function { name, params, body } => {
                 self.define(name);
-                self.declare(name);
+                self.declare(name)?;
 
-                self.resolve_fn(stmt, FunctionType::Function);
+                self.resolve_fn(stmt, FunctionType::Function)?;
             }
             Stmt::Expression { expr } => {
-                self.resolve_expr(&expr);
+                self.resolve_expr(&expr)?;
             }
             Stmt::IfStmt { condition, then_branch, else_branch } => {
-                self.resolve_expr(condition);
-                self.resolve_stmt(then_branch);
+                self.resolve_expr(condition)?;
+                self.resolve_stmt(then_branch)?;
                 if let Some(else_branch) = else_branch {
-                    self.resolve_stmt(else_branch);
+                    self.resolve_stmt(else_branch)?;
                 }
             }
             Stmt::Print { expr } => {
-                self.resolve_expr(expr);
+                self.resolve_expr(expr)?;
             }
             Stmt::Return { keyword, value } => {
                 if self.current_fn == FunctionType::None {
@@ -71,12 +71,12 @@ impl<'a> Resolver<'a> {
                 }
 
                 if let Some(return_val) = value {
-                    self.resolve_expr(return_val);
+                    self.resolve_expr(return_val)?;
                 }
             }
             Stmt::While { condition, body } => {
-                self.resolve_expr(condition);
-                self.resolve_stmt(body);
+                self.resolve_expr(condition)?;
+                self.resolve_stmt(body)?;
             }
         }
         Ok(())
@@ -97,58 +97,70 @@ impl<'a> Resolver<'a> {
                 self.resolve_local(expr, name);
             }
             Expr::Assign { name, value } => {
-                self.resolve_expr(value);
+                self.resolve_expr(value)?;
                 self.resolve_local(expr, name);
             }
             Expr::Binary { left, operator, right } => {
-                self.resolve_expr(&left);
+                let _ = operator;
+                self.resolve_expr(left)?;
+                self.resolve_expr(right)?;
             }
             Expr::Call { callee, paren, args } => {
-                self.resolve_expr(&callee);
+                let _ = paren;
+                self.resolve_expr(callee)?;
                 for arg in args {
-                    self.resolve_expr(arg);
+                    self.resolve_expr(arg)?;
                 }
             }
             Expr::Grouping { expression } => {
-                self.resolve_expr(&expr);
+                self.resolve_expr(expression)?;
             }
             Expr::Literal { value } => {}
             Expr::Logical { left, operator, right } => {
-                self.resolve_expr(&left);
-                self.resolve_expr(&right);
+                let _ = operator;
+                self.resolve_expr(left)?;
+                self.resolve_expr(right)?;
             }
             Expr::Unary { operator, right } => {
-                self.resolve_expr(&right);
+                let _ = operator;
+                self.resolve_expr(right)?;
             }
         }
 
         Ok(())
     }
 
-    fn resolve_fn(&mut self, stmt: &Stmt, fn_type: FunctionType) {
+    fn resolve_fn(&mut self, stmt: &Stmt, fn_type: FunctionType) -> ResolverResult<()> {
         let Stmt::Function { name, params, body } = stmt else { unreachable!() };
+        let _ = name;
         let enclosing_fn = self.current_fn;
         self.current_fn = fn_type;
         self.begin_scope();
 
         for param in params {
-            self.declare(param);
+            self.declare(param)?;
             self.define(param);
         }
 
-        self.resolve_stmts(&body);
+        self.resolve_stmts(body)?;
 
         self.end_scrop();
 
         self.current_fn = enclosing_fn;
+        Ok(())
     }
 
-    fn resolve_stmts(&mut self, stmts: &[Stmt]) {}
+    fn resolve_stmts(&mut self, stmts: &[Stmt]) -> ResolverResult<()> {
+        for stmt in stmts {
+            self.resolve_stmt(stmt)?;
+        }
+        Ok(())
+    }
 
     fn resolve_local(&mut self, expr: &Expr, name: &Token) {
         for (ix, scope) in self.scopes.iter().rev().enumerate() {
             if scope.contains_key(&name.lexeme) {
-                // TODO: self.interpret.resolve
+                self.interpret.resolve(expr, ix);
                 return;
             }
         }
@@ -178,9 +190,9 @@ impl<'a> Resolver<'a> {
         };
 
         if let Some(current_scope) = self.get_current_scope_mut()
-            && let Some(mut ident_mut) = current_scope.get_mut(&name.lexeme)
+            && let Some(ident_mut) = current_scope.get_mut(&name.lexeme)
         {
-            ident_mut = &mut true;
+            *ident_mut = true;
         }
     }
 
