@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use interpreter_types::Token;
 
-use crate::{Interpret, Stmt};
+use crate::{Expr, Interpret, Stmt};
 
 pub struct Resolver {
     interpret: Interpret,
@@ -18,10 +18,18 @@ impl Resolver {
     pub fn resolve_stmt(&mut self, stmt: Stmt) {
         match stmt {
             Stmt::Block { stmts } => {}
-            Stmt::Var { name, initializer } => {}
+            Stmt::Var { name, initializer } => {
+                self.declare(&name);
+                if let Some(ref init) = initializer {
+                    self.resolve_expr(expr);
+                }
+                self.define(&name);
+            }
             _ => {}
         }
     }
+
+    fn resolve_expr(&mut self, expr: &Expr) {}
 
     fn declare(&mut self, name: &Token) {
         if self.is_scope_empty() {
@@ -30,6 +38,18 @@ impl Resolver {
 
         if let Some(current_scope) = self.get_current_scope() {
             current_scope.insert(name.lexeme.clone(), false);
+        }
+    }
+
+    fn define(&mut self, name: &Token) {
+        if self.is_scope_empty() {
+            return;
+        };
+
+        if let Some(current_scope) = self.get_current_scope()
+            && let Some(mut ident_mut) = current_scope.get_mut(&name.lexeme)
+        {
+            ident_mut = &mut true;
         }
     }
 
