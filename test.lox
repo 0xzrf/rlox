@@ -1,0 +1,109 @@
+// Comprehensive Lox feature smoke-test for this interpreter.
+// Covers: var declarations, expressions, print, blocks/scope, if/else,
+// while loops, for loops, functions, recursion, closures, return, logical ops.
+
+print "== literals / expressions ==";
+print 123;
+print 123.456;
+print "hello" + " " + "lox";
+print true;
+print false;
+print nil;
+
+print "== arithmetic / comparison / equality ==";
+print 1 + 2 * 3 - 4 / 2; // precedence
+print (1 + 2) * 3;
+print -3;
+print 3 > 2;
+print 3 >= 3;
+print 2 < 3;
+print 2 <= 2;
+print 2 == 2;
+print 2 != 3;
+print "a" == "a";
+
+print "== variables / assignment ==";
+var a = 10;
+var b;
+print a;
+print b; // nil
+b = a + 5;
+print b;
+
+print "== blocks / shadowing ==";
+var x = "global";
+{
+  var x = "block";
+  print x;
+  {
+    var x = "inner";
+    print x;
+  }
+  print x;
+}
+print x;
+
+print "== if / else + logical and/or ==";
+var t = true;
+var f = false;
+if (t and (1 < 2)) {
+  print "if-branch";
+} else {
+  print "else-branch";
+}
+
+// Short-circuit sanity checks (should not error).
+// If your interpreter evaluates RHS eagerly, these will likely fail.
+fun boom() {
+  // Using an undefined variable would error if evaluated.
+  return notDefined;
+}
+if (true or boom()) print "short-circuit or ok";
+if (false and boom()) print "short-circuit and ok";
+
+print "== while loop ==";
+var i = 0;
+var sum = 0;
+while (i < 5) {
+  sum = sum + i;
+  i = i + 1;
+}
+print sum; // 0+1+2+3+4 = 10
+
+print "== for loop (desugars to while) ==";
+var fact = 1;
+for (var n = 1; n <= 6; n = n + 1) {
+  fact = fact * n;
+}
+print fact; // 720
+
+print "== functions / recursion ==";
+fun fib(n) {
+  if (n <= 1) return n;
+  return fib(n - 1) + fib(n - 2);
+}
+print fib(0);
+print fib(1);
+print fib(6); // 8
+
+print "== closures ==";
+fun makeCounter(start) {
+  var c = start;
+  fun inc() {
+    c = c + 1;
+    return c;
+  }
+  return inc;
+}
+var c1 = makeCounter(0);
+print c1();
+print c1();
+var c2 = makeCounter(10);
+print c2();
+print c1();
+
+print "== native function (clock) ==";
+// Should print a number (seconds since epoch) if native clock is wired up.
+print clock();
+
+print "== done ==";

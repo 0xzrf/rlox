@@ -22,6 +22,9 @@ impl Commands {
     pub fn handle_command(&self) -> InterpreterErrors<i32> {
         match &self.cmd {
             InterpreterCommands::Tokenize { file_path } => {
+                if !file_path.ends_with(".lox") {
+                    return Err(CliErrors::InvalidFileType);
+                }
                 let scanner = Scanner::new(file_path.clone());
 
                 match scanner.scan(true) {
@@ -31,6 +34,9 @@ impl Commands {
             }
 
             InterpreterCommands::Parse { file_path } => {
+                if !file_path.ends_with(".lox") {
+                    return Err(CliErrors::InvalidFileType);
+                }
                 let scanner = Scanner::new(file_path.clone());
 
                 match scanner.scan(false) {
@@ -41,12 +47,16 @@ impl Commands {
                             Ok(stmts) => {
                                 let mut interpreter = Interpret::new();
                                 interpreter.interpret_stmts(&stmts).map_err(|e| {
-                                    CliErrors::RuntimeError { reason: e.to_string() }
+                                    CliErrors::RuntimeError {
+                                        reason: e.to_string(),
+                                    }
                                 })?;
 
                                 Ok(0)
                             }
-                            Err(e) => Err(CliErrors::ParserError { reason: e.to_string() }),
+                            Err(e) => Err(CliErrors::ParserError {
+                                reason: e.to_string(),
+                            }),
                         }
                     }
                     Err(e) => Err(CliErrors::ScannerError { reason: e }),
